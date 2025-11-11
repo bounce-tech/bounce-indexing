@@ -1,6 +1,9 @@
-import { createConfig } from "ponder";
+import { createConfig, factory } from "ponder";
 
 import { LeveragedTokenAbi } from "./abis/LeveragedTokenAbi";
+import { parseAbiItem } from "viem";
+
+const FACTORY_ADDRESS = "0xaBD5D943b4Bb1D25C6639dD264243b246CC3aA51";
 
 export default createConfig({
   chains: {
@@ -9,12 +12,26 @@ export default createConfig({
       rpc: process.env.HYPER_EVM_RPC_URL,
     },
   },
+  blocks: {
+    NewBlock: {
+      chain: "hyperEvm",
+      interval: 1,
+      startBlock: 18496592,
+    },
+  },
   contracts: {
     LeveragedToken: {
       chain: "hyperEvm",
       abi: LeveragedTokenAbi,
-      address: "0x1EefbAcFeA06D786Ce012c6fc861bec6C7a828c1",
-      startBlock: 16430184,
+      address: factory({
+        address: FACTORY_ADDRESS,
+        event: parseAbiItem(
+          "event CreateLeveragedToken(address indexed creator, address indexed token, uint32 indexed marketId, uint256 targetLeverage, bool isLong)"
+        ),
+        parameter: "token",
+      }),
+
+      startBlock: 16731647,
     },
   },
 });
