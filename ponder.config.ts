@@ -2,6 +2,7 @@ import { createConfig, factory } from "ponder";
 
 import { LeveragedTokenAbi } from "./abis/LeveragedTokenAbi";
 import { parseAbiItem } from "viem";
+import { FactoryAbi } from "./abis/FactoryAbi";
 
 const FACTORY_ADDRESS = "0xaBD5D943b4Bb1D25C6639dD264243b246CC3aA51";
 
@@ -32,6 +33,11 @@ export default createConfig({
       }),
 
       startBlock: 16731647,
+    },
+    Factory: {
+      chain: "hyperEvm",
+      abi: FactoryAbi,
+      address: FACTORY_ADDRESS,
     },
   },
 });
