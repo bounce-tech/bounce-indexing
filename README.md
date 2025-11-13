@@ -17,7 +17,9 @@ This project indexes the **Bounce Tech leveraged token protocol**, a decentraliz
 npm install
 ```
 
-2. Set up environment variables:
+2. Set up environment variables in `.env.local`:
+
+Create a `.env.local` file in the root directory with:
 
 ```bash
 HYPER_EVM_RPC_URL=your_rpc_url_here
