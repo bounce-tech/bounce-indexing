@@ -14,8 +14,8 @@ app.use("/graphql", graphql({ db, schema }));
 app.get("/stats", async (c) => {
   const tradeResult = await db
     .select({
-      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount} / 1000000)`,
-      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * (${schema.leveragedToken.targetLeverage} / 1000000000000000000000000))`,
+      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount}) / 1000000`,
+      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * ${schema.leveragedToken.targetLeverage}) / 1000000000000000000000000`,
       uniqueUsers: sql<number>`count(distinct ${schema.trade.recipient})`,
     })
     .from(schema.trade)
