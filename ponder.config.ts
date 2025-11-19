@@ -4,7 +4,8 @@ import { LeveragedTokenAbi } from "./abis/LeveragedTokenAbi";
 import { parseAbiItem } from "viem";
 import { FactoryAbi } from "./abis/FactoryAbi";
 
-const FACTORY_ADDRESS = "0xaBD5D943b4Bb1D25C6639dD264243b246CC3aA51";
+export const LT_HELPER_ADDRESS = "0x560149730F1cb1594F15cF2186b4A86eC761c64D";
+export const FACTORY_ADDRESS = "0xaBD5D943b4Bb1D25C6639dD264243b246CC3aA51";
 
 export default createConfig({
   chains: {
