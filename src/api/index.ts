@@ -63,7 +63,7 @@ app.get("/stats", async (c) => {
   // Formatting results
   const marginVolume = Number(tradeResult[0]?.marginVolume || 0);
   const notionalVolume = Number(tradeResult[0]?.notionalVolume || 0);
-  const averageLeverage = notionalVolume / marginVolume;
+  const averageLeverage = marginVolume > 0 ? notionalVolume / marginVolume : 0;
   const uniqueAssets = leveragedTokenResult[0]?.supportedAssets || 0;
   const leveragedTokens = leveragedTokenResult[0]?.leveragedTokens || 0;
   const uniqueUsers = tradeResult[0]?.uniqueUsers || 0;
