@@ -12,10 +12,11 @@ app.use("/", graphql({ db, schema }));
 app.use("/graphql", graphql({ db, schema }));
 
 app.get("/stats", async (c) => {
-  const result = await db
+  const tradeResult = await db
     .select({
       marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount} / 1000000)`,
       notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * (${schema.leveragedToken.targetLeverage} / 1000000000000000000000000))`,
+      uniqueUsers: sql<number>`count(distinct ${schema.trade.recipient})`,
     })
     .from(schema.trade)
     .leftJoin(
@@ -23,30 +24,19 @@ app.get("/stats", async (c) => {
       sql`${schema.trade.leveragedToken} = ${schema.leveragedToken.address}`
     );
 
-  const uniqueAssetsResult = await db
+  const leveragedTokenResult = await db
     .select({
-      count: sql<number>`count(distinct ${schema.leveragedToken.marketId})`,
+      supportedAssets: sql<number>`count(distinct ${schema.leveragedToken.marketId})`,
+      leveragedTokens: sql<number>`count(*)`,
     })
     .from(schema.leveragedToken);
 
-  const leveragedTokensResult = await db
-    .select({
-      count: sql<number>`count(*)`,
-    })
-    .from(schema.leveragedToken);
-
-  const uniqueUsersResult = await db
-    .select({
-      count: sql<number>`count(distinct ${schema.trade.recipient})`,
-    })
-    .from(schema.trade);
-
-  const marginVolume = Number(result[0]?.marginVolume || 0);
-  const notionalVolume = Number(result[0]?.notionalVolume || 0);
+  const marginVolume = Number(tradeResult[0]?.marginVolume || 0);
+  const notionalVolume = Number(tradeResult[0]?.notionalVolume || 0);
   const averageLeverage = notionalVolume / marginVolume;
-  const uniqueAssets = uniqueAssetsResult[0]?.count || 0;
-  const leveragedTokens = leveragedTokensResult[0]?.count || 0;
-  const uniqueUsers = uniqueUsersResult[0]?.count || 0;
+  const uniqueAssets = leveragedTokenResult[0]?.supportedAssets || 0;
+  const leveragedTokens = leveragedTokenResult[0]?.leveragedTokens || 0;
+  const uniqueUsers = tradeResult[0]?.uniqueUsers || 0;
 
   return c.json({
     marginVolume: marginVolume,
