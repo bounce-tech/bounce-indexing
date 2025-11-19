@@ -10,7 +10,7 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
     id: crypto.randomUUID(),
     isBuy: true,
     timestamp: event.block.timestamp,
-    leveragedToken: event.log?.address ?? event.address,
+    leveragedToken: event.log.address,
     sender: minter,
     recipient: to,
     baseAssetAmount: baseAmount,
