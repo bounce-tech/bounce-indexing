@@ -9,20 +9,14 @@ export const LT_HELPER_ADDRESS = "0x560149730F1cb1594F15cF2186b4A86eC761c64D";
 export const FACTORY_ADDRESS = "0xaBD5D943b4Bb1D25C6639dD264243b246CC3aA51";
 export const REFERRALS_ADDRESS = "0x82A4063f4d05bb7BF18DF314DC5B63b655E86cBD";
 
-const startBlock = 16729000;
+const factoryDeployed = 16730183;
+const ltsDeployed = 16731647;
 
 export default createConfig({
   chains: {
     hyperEvm: {
       id: 999,
       rpc: process.env.HYPER_EVM_RPC_URL,
-    },
-  },
-  blocks: {
-    NewBlock: {
-      chain: "hyperEvm",
-      interval: 1,
-      startBlock,
     },
   },
   contracts: {
@@ -35,20 +29,21 @@ export default createConfig({
           "event CreateLeveragedToken(address indexed creator, address indexed token, uint32 indexed marketId, uint256 targetLeverage, bool isLong)"
         ),
         parameter: "token",
+        startBlock: factoryDeployed,
       }),
-      startBlock,
+      startBlock: ltsDeployed,
     },
     Factory: {
       chain: "hyperEvm",
       abi: FactoryAbi,
       address: FACTORY_ADDRESS,
-      startBlock,
+      startBlock: factoryDeployed,
     },
     Referrals: {
       chain: "hyperEvm",
       abi: ReferralsAbi,
       address: REFERRALS_ADDRESS,
-      startBlock,
+      startBlock: ltsDeployed,
     },
   },
 });
