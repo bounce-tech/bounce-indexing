@@ -8,6 +8,7 @@ import getTradedLtsForUser from "./endpoints/traded-lts-for-user";
 import getStats from "./endpoints/stats";
 import formatError from "./utils/format-error";
 import formatSuccess from "./utils/format-success";
+import getPnlForUser from "./endpoints/pnl-for-user";
 
 const app = new Hono();
 
@@ -44,6 +45,15 @@ app.get("/traded-lts", async (c) => {
   if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
   const tradedLts = await getTradedLtsForUser(user);
   return c.json(formatSuccess(tradedLts));
+});
+
+// User PnL endpoint
+app.get("/user-pnl", async (c) => {
+  const user = c.req.query("user");
+  if (!user) return c.json(formatError("Missing user parameter"), 400);
+  if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+  const pnl = await getPnlForUser(user);
+  return c.json(formatSuccess(pnl));
 });
 
 export default app;
