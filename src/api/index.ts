@@ -6,6 +6,8 @@ import { client, graphql } from "ponder";
 import { isAddress } from "viem";
 import getTradedLtsForUser from "./endpoints/traded-lts-for-user";
 import getStats from "./endpoints/stats";
+import formatError from "./utils/format-error";
+import formatSuccess from "./utils/format-success";
 
 const app = new Hono();
 
@@ -32,16 +34,16 @@ app.use("/graphql", graphql({ db, schema }));
 // Stats endpoint
 app.get("/stats", async (c) => {
   const stats = await getStats();
-  return c.json(stats);
+  return c.json(formatSuccess(stats));
 });
 
 // User traded LTs endpoint
 app.get("/traded-lts", async (c) => {
   const user = c.req.query("user");
-  if (!user) return c.json({ error: "Missing user parameter" }, 400);
-  if (!isAddress(user)) return c.json({ error: "Invalid user address" }, 400);
+  if (!user) return c.json(formatError("Missing user parameter"), 400);
+  if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
   const tradedLts = await getTradedLtsForUser(user);
-  return c.json({ tradedLts: tradedLts });
+  return c.json(formatSuccess(tradedLts));
 });
 
 export default app;
