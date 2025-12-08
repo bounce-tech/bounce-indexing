@@ -1,7 +1,7 @@
-const formatSuccess = (data: any) => {
+const formatSuccess = <T>(data: T) => {
   return {
     status: "success",
-    data: data,
+    data,
     error: null,
   };
 };
