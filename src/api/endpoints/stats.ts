@@ -5,12 +5,17 @@ import { LT_HELPER_ADDRESS } from "../../../ponder.config";
 import { LeveragedTokenHelperAbi } from "../../../abis/LeveragedTokenHelperAbi";
 import { formatUnits } from "viem";
 
+const BASE_ASSET_DECIMALS = BigInt(1e6);
+const LEVERAGE_DECIMALS = BigInt(1e18);
+
 const getStats = async () => {
   // Querying database tables
   const tradeResult = await db
     .select({
-      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount}) / 1000000`,
-      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * ${schema.leveragedToken.targetLeverage}) / 1000000000000000000000000`,
+      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount}) / ${BASE_ASSET_DECIMALS}`,
+      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * ${
+        schema.leveragedToken.targetLeverage
+      }) / (${LEVERAGE_DECIMALS * BASE_ASSET_DECIMALS})`,
       uniqueUsers: sql<number>`count(distinct ${schema.trade.recipient})`,
       totalTrades: sql<number>`count(*)`,
     })
@@ -44,8 +49,7 @@ const getStats = async () => {
     (acc: bigint, token: any) => {
       return (
         acc +
-        (token.totalAssets * BigInt(token.targetLeverage)) /
-          1000000000000000000n
+        (token.totalAssets * BigInt(token.targetLeverage)) / LEVERAGE_DECIMALS
       );
     },
     0n
