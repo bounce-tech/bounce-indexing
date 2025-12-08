@@ -7,16 +7,15 @@ import bigIntToNumber from "../utils/big-int-to-number";
 import getCostAndRealized from "../utils/get-cost-and-realized";
 
 interface LeveragedTokenPnl {
-  leveragedToken: Address;
   realized: number;
   unrealized: number;
   unrealizedPercent: number;
 }
 
 interface UserPnl {
-  realized: number;
-  unrealized: number;
-  leveragedTokens: LeveragedTokenPnl[];
+  totalRealized: number;
+  totalUnrealized: number;
+  leveragedTokens: Record<Address, LeveragedTokenPnl>;
 }
 
 const getPnlForUser = async (user: Address) => {
@@ -28,7 +27,9 @@ const getPnlForUser = async (user: Address) => {
   const tradeLts = trades.map((trade) => trade.leveragedToken);
   const transferLts = transfers.map((transfer) => transfer.leveragedToken);
   const uniqueLts = [...new Set([...tradeLts, ...transferLts])];
-  const leveragedTokens: LeveragedTokenPnl[] = [];
+  const leveragedTokens: Record<Address, LeveragedTokenPnl> = {};
+  let totalRealized = 0;
+  let totalUnrealized = 0;
   for (const lt of uniqueLts) {
     const data = leveragedTokenData.find(
       (l) => l.leveragedToken.toLowerCase() === lt
@@ -46,17 +47,17 @@ const getPnlForUser = async (user: Address) => {
     const currentValue = ltBalance * exchangeRate;
     const unrealized = currentValue - cost;
     const unrealizedPercent = cost === 0 ? 0 : unrealized / cost;
-    const leveragedTokenPnl: LeveragedTokenPnl = {
-      leveragedToken: lt,
+    leveragedTokens[lt] = {
       realized,
       unrealized,
       unrealizedPercent: Number(unrealizedPercent.toFixed(6)),
     };
-    leveragedTokens.push(leveragedTokenPnl);
+    totalRealized += realized;
+    totalUnrealized += unrealized;
   }
   const userPnl: UserPnl = {
-    realized: leveragedTokens.reduce((acc, lt) => acc + lt.realized, 0),
-    unrealized: leveragedTokens.reduce((acc, lt) => acc + lt.unrealized, 0),
+    totalRealized,
+    totalUnrealized,
     leveragedTokens,
   };
   return userPnl;

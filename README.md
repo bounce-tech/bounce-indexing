@@ -303,20 +303,18 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
   "data": {
     "realized": 1234.56,
     "unrealized": -567.89,
-    "leveragedTokens": [
-      {
-        "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
+    "leveragedTokens": {
+      "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1": {
         "realized": 500.0,
         "unrealized": 200.0,
         "unrealizedPercent": 0.4
       },
-      {
-        "leveragedToken": "0x22a7a4a38a97ca44473548036f22a7bcd2c25457",
+      "0x22a7a4a38a97ca44473548036f22a7bcd2c25457": {
         "realized": 734.56,
         "unrealized": -767.89,
         "unrealizedPercent": -1.045
       }
-    ]
+    }
   },
   "error": null
 }
