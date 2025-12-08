@@ -5,12 +5,21 @@ import { LT_HELPER_ADDRESS } from "../../../ponder.config";
 import { LeveragedTokenHelperAbi } from "../../../abis/LeveragedTokenHelperAbi";
 import { formatUnits } from "viem";
 
+// Base asset has 6 decimals (USDC)
+const BASE_ASSET_DECIMALS = 1000000; // 1e6
+
+// Leverage is stored with 18 decimals, total scaling factor for notional volume calculation
+const NOTIONAL_VOLUME_SCALE = 1000000000000000000000000; // 1e24 (1e6 * 1e18)
+
+// Leverage precision factor
+const LEVERAGE_DECIMALS = 1000000000000000000; // 1e18
+
 const getStats = async () => {
   // Querying database tables
   const tradeResult = await db
     .select({
-      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount}) / 1000000`,
-      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * ${schema.leveragedToken.targetLeverage}) / 1000000000000000000000000`,
+      marginVolume: sql<string>`sum(${schema.trade.baseAssetAmount}) / ${BASE_ASSET_DECIMALS}`,
+      notionalVolume: sql<string>`sum(${schema.trade.baseAssetAmount} * ${schema.leveragedToken.targetLeverage}) / ${NOTIONAL_VOLUME_SCALE}`,
       uniqueUsers: sql<number>`count(distinct ${schema.trade.recipient})`,
       totalTrades: sql<number>`count(*)`,
     })
@@ -45,7 +54,7 @@ const getStats = async () => {
       return (
         acc +
         (token.totalAssets * BigInt(token.targetLeverage)) /
-          1000000000000000000n
+          BigInt(LEVERAGE_DECIMALS)
       );
     },
     0n
