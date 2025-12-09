@@ -35,6 +35,6 @@ ponder.on("Factory:CreateLeveragedToken", async ({ event, context }) => {
     symbol: symbol,
     name: name,
     decimals: decimals,
-    assets: asset,
+    asset: asset,
   });
 });
