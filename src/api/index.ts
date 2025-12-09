@@ -9,6 +9,8 @@ import getStats from "./endpoints/stats";
 import formatError from "./utils/format-error";
 import formatSuccess from "./utils/format-success";
 import getPnlForUser from "./endpoints/pnl-for-user";
+import getUsersTrades from "./endpoints/users-trades";
+import { bigIntSerializationMiddleware } from "./utils/serialize-bigint";
 
 const app = new Hono();
 
@@ -26,6 +28,9 @@ app.use(
     credentials: true,
   })
 );
+
+// Global BigInt serialization middleware
+app.use("*", bigIntSerializationMiddleware);
 
 // Use Ponder client and graphql
 app.use("/sql/*", client({ db, schema }));
@@ -45,6 +50,15 @@ app.get("/traded-lts", async (c) => {
   if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
   const tradedLts = await getTradedLtsForUser(user);
   return c.json(formatSuccess(tradedLts));
+});
+
+// User's trades
+app.get("/users-trades", async (c) => {
+  const user = c.req.query("user");
+  if (!user) return c.json(formatError("Missing user parameter"), 400);
+  if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+  const trades = await getUsersTrades(user);
+  return c.json(formatSuccess(trades));
 });
 
 // User PnL endpoint
