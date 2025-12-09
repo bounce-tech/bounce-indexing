@@ -40,7 +40,7 @@ The dev server will:
 - Start indexing from the configured start block
 - Serve the GraphQL API at `http://localhost:42069/graphql`
 - Serve SQL over HTTP at `http://localhost:42069/sql`
-- Serve custom API endpoints (including `/stats`, `/traded-lts`, and `/user-pnl`) at `http://localhost:42069`
+- Serve custom API endpoints (including `/stats`, `/traded-lts`, `/users-trades`, and `/user-pnl`) at `http://localhost:42069`
 
 ## Schema
 
@@ -271,6 +271,75 @@ GET http://localhost:42069/traded-lts?user=0x12345678901234567890123456789012345
 
 - `400 Bad Request`: Missing or invalid user address parameter
 
+#### Users Trades Endpoint
+
+Get all trades for a specific user at `http://localhost:42069/users-trades`.
+
+**Query Parameters:**
+
+- `user` (required): Ethereum address of the user
+- `asset` (optional): Filter trades by asset (base asset symbol)
+
+**Response Data:**
+
+- Array of trade objects, each containing:
+  - `timestamp`: Block timestamp of the trade
+  - `isBuy`: `true` for mints (buys), `false` for redeems (sells)
+  - `baseAssetAmount`: Amount of base asset (as string, serialized from BigInt)
+  - `leveragedTokenAmount`: Amount of leveraged tokens (as string, serialized from BigInt)
+  - `leveragedToken`: Address of the leveraged token
+
+**Example Request:**
+
+```
+GET http://localhost:42069/users-trades?user=0x1234567890123456789012345678901234567890
+```
+
+**Example Request with Asset Filter:**
+
+```
+GET http://localhost:42069/users-trades?user=0x1234567890123456789012345678901234567890&asset=USDT
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "timestamp": "1704067200",
+      "isBuy": true,
+      "baseAssetAmount": "1000000000",
+      "leveragedTokenAmount": "5000000000000000000",
+      "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1"
+    },
+    {
+      "timestamp": "1704153600",
+      "isBuy": false,
+      "baseAssetAmount": "500000000",
+      "leveragedTokenAmount": "2500000000000000000",
+      "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1"
+    }
+  ],
+  "error": null
+}
+```
+
+**Example Error Response:**
+
+```json
+{
+  "status": "error",
+  "data": null,
+  "error": "Missing user parameter"
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Missing or invalid user address parameter
+
 #### User PnL Endpoint
 
 Get profit and loss (PnL) information for a user across all leveraged tokens at `http://localhost:42069/user-pnl`.
@@ -281,13 +350,14 @@ Get profit and loss (PnL) information for a user across all leveraged tokens at 
 
 **Response Data:**
 
-- `realized`: Total realized PnL across all leveraged tokens (in base asset units)
-- `unrealized`: Total unrealized PnL across all leveraged tokens (in base asset units)
-- `leveragedTokens`: Array of PnL data for each leveraged token the user has traded:
-  - `leveragedToken`: Address of the leveraged token
-  - `realized`: Realized PnL for this leveraged token (in base asset units)
-  - `unrealized`: Unrealized PnL for this leveraged token (in base asset units)
-  - `unrealizedPercent`: Unrealized PnL as a percentage (e.g., 0.15 = 15%)
+- `totalRealized`: Total realized PnL across all leveraged tokens (in base asset units)
+- `totalUnrealized`: Total unrealized PnL across all leveraged tokens (in base asset units)
+- `leveragedTokens`: Record (object) of PnL data keyed by leveraged token address:
+  - Each key is a leveraged token address
+  - Each value contains:
+    - `realized`: Realized PnL for this leveraged token (in base asset units)
+    - `unrealized`: Unrealized PnL for this leveraged token (in base asset units)
+    - `unrealizedPercent`: Unrealized PnL as a percentage (e.g., 0.15 = 15%)
 
 **Example Request:**
 
@@ -301,8 +371,8 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
 {
   "status": "success",
   "data": {
-    "realized": 1234.56,
-    "unrealized": -567.89,
+    "totalRealized": 1234.56,
+    "totalUnrealized": -567.89,
     "leveragedTokens": {
       "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1": {
         "realized": 500.0,
