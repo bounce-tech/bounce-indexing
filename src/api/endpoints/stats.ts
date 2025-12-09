@@ -1,9 +1,10 @@
-import { db, publicClients } from "ponder:api";
+import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { sql } from "drizzle-orm";
-import { LT_HELPER_ADDRESS } from "../../../ponder.config";
-import { LeveragedTokenHelperAbi } from "../../../abis/LeveragedTokenHelperAbi";
 import { formatUnits } from "viem";
+import getLeveragedTokenData, {
+  LeveragedTokenData,
+} from "../utils/leveraged-token-data";
 
 const BASE_ASSET_DECIMALS = BigInt(1e6);
 const LEVERAGE_DECIMALS = BigInt(1e18);
@@ -32,21 +33,18 @@ const getStats = async () => {
     .from(schema.leveragedToken);
 
   // Querying leveraged token contracts
-  const leveragedTokenContracts = (await publicClients["hyperEvm"].readContract(
-    {
-      abi: LeveragedTokenHelperAbi,
-      address: LT_HELPER_ADDRESS,
-      functionName: "getLeveragedTokens",
-    }
-  )) as any[];
+  const leveragedTokenData = await getLeveragedTokenData();
 
   // Calculating total value locked and open interest
-  const tvlBn = leveragedTokenContracts.reduce((acc: bigint, token: any) => {
-    return acc + token.totalAssets;
-  }, 0n);
+  const tvlBn = leveragedTokenData.reduce(
+    (acc: bigint, token: LeveragedTokenData) => {
+      return acc + token.totalAssets;
+    },
+    0n
+  );
   const tvl = Number(formatUnits(tvlBn, 6));
-  const openInterestBn = leveragedTokenContracts.reduce(
-    (acc: bigint, token: any) => {
+  const openInterestBn = leveragedTokenData.reduce(
+    (acc: bigint, token: LeveragedTokenData) => {
       return (
         acc +
         (token.totalAssets * BigInt(token.targetLeverage)) / LEVERAGE_DECIMALS
