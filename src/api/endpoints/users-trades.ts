@@ -8,7 +8,7 @@ const getUsersTrades = async (user: Address, asset?: string) => {
   if (asset) {
     where = and(
       eq(schema.trade.recipient, user as Address),
-      eq(schema.leveragedToken.assets, asset)
+      eq(schema.leveragedToken.asset, asset)
     );
   } else {
     where = eq(schema.trade.recipient, user as Address);
@@ -24,6 +24,7 @@ const getUsersTrades = async (user: Address, asset?: string) => {
       leveragedToken: schema.trade.leveragedToken,
       targetLeverage: schema.leveragedToken.targetLeverage,
       isLong: schema.leveragedToken.isLong,
+      asset: schema.leveragedToken.asset,
     })
     .from(schema.trade)
     .innerJoin(
