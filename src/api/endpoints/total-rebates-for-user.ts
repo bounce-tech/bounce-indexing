@@ -1,21 +1,21 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
-import { eq } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { Address } from "viem";
 import bigIntToNumber from "../utils/big-int-to-number";
 
 const getTotalRebatesForUser = async (user: Address) => {
-  const totalRebates = await db
+  const result = await db
     .select({
-      rebateAmount: schema.rebate.rebate,
+      totalRebate: sql<string>`coalesce(sum(${schema.rebate.rebate}), 0)`,
     })
     .from(schema.rebate)
     .where(eq(schema.rebate.sender, user));
-  const total = totalRebates.reduce(
-    (acc, rebate) => acc + bigIntToNumber(rebate.rebateAmount, 6),
-    0
-  );
-  return total;
+
+  const totalRebateBigInt =
+    result[0]?.totalRebate !== undefined ? BigInt(result[0].totalRebate) : 0n;
+
+  return bigIntToNumber(totalRebateBigInt, 6);
 };
 
 export default getTotalRebatesForUser;

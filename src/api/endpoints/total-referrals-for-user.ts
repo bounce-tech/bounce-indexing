@@ -1,16 +1,16 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
+import { sql } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 import { Address } from "viem";
-import bigIntToNumber from "../utils/big-int-to-number";
 
 const getTotalReferralsForUser = async (user: Address) => {
-  const allReferrals = await db
-    .select()
+  const result = await db
+    .select({ total: sql<number>`count(*)` })
     .from(schema.referral)
     .where(eq(schema.referral.referrer, user));
 
-  return allReferrals.length;
+  return result[0]?.total ?? 0;
 };
 
 export default getTotalReferralsForUser;
