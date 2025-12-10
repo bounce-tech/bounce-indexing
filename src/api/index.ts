@@ -11,6 +11,8 @@ import formatSuccess from "./utils/format-success";
 import getPnlForUser from "./endpoints/pnl-for-user";
 import getUsersTrades from "./endpoints/users-trades";
 import { bigIntSerializationMiddleware } from "./utils/serialize-bigint";
+import getTotalRebatesForUser from "./endpoints/total-rebates-for-user";
+import getTotalReferralsForUser from "./endpoints/total-referrals-for-user";
 
 const app = new Hono();
 
@@ -71,6 +73,24 @@ app.get("/user-pnl", async (c) => {
   if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
   const pnl = await getPnlForUser(user);
   return c.json(formatSuccess(pnl));
+});
+
+// User total rebates
+app.get("/total-rebates", async (c) => {
+  const user = c.req.query("user");
+  if (!user) return c.json(formatError("Missing user parameter"), 400);
+  if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+  const totalRebates = await getTotalRebatesForUser(user);
+  return c.json(formatSuccess(totalRebates));
+});
+
+// User's total referrals
+app.get("/total-referrals", async (c) => {
+  const user = c.req.query("user");
+  if (!user) return c.json(formatError("Missing user parameter"), 400);
+  if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+  const totalReferrals = await getTotalReferralsForUser(user);
+  return c.json(formatSuccess(totalReferrals));
 });
 
 export default app;
