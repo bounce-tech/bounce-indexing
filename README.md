@@ -437,6 +437,74 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
 
 - `400 Bad Request`: Missing or invalid user address parameter
 
+#### Total Rebates Endpoint
+
+Get the number value of rebates a user has claimed at `http://localhost:42069/total-rebates`.
+
+**Query Parameters:**
+
+- `user` (required): Ethereum address of the user
+
+**Response Data:**
+
+- Number representing the value of rebates the user has claimed
+
+**Example Request:**
+
+```
+GET http://localhost:42069/total-rebates?user=0x1234567890123456789012345678901234567890
+```
+
+**Example Success Response:**
+
+```json
+{ "status": "success", "data": 3.58269, "error": null }
+```
+
+**Example Error Response:**
+
+```json
+{ "status": "error", "error": "Missing user parameter", "data": null }
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Missing or invalid user address parameter
+
+#### Total Referrals Endpoint
+
+Get the number value of referrals a user has made at `http://localhost:42069/total-referrals`.
+
+**Query Parameters:**
+
+- `user` (required): Ethereum address of the user
+
+**Response Data:**
+
+- Number representing the number of referrals a user has made
+
+**Example Request:**
+
+```
+GET http://localhost:42069/total-referrals?user=0x1234567890123456789012345678901234567890
+```
+
+**Example Success Response:**
+
+```json
+{ "status": "success", "data": 3, "error": null }
+```
+
+**Example Error Response:**
+
+```json
+{ "status": "error", "error": "Missing user parameter", "data": null }
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Missing or invalid user address parameter
+
 ## Scripts
 
 - `npm run dev`: Start development server with hot reload
