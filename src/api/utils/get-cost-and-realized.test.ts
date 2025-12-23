@@ -48,6 +48,17 @@ describe("getCostAndRealized", () => {
     expect(result.realized).toBe(100);
   });
 
+  it("should handle two stepped redemptions", () => {
+    const actions: Action[] = [
+      createAction(TradeType.MINT, 1000, 100, 1),
+      createAction(TradeType.REDEEM, 600, 50, 2),
+      createAction(TradeType.REDEEM, 600, 50, 3),
+    ];
+    const result = getCostAndRealized(actions);
+    expect(result.cost).toBe(0);
+    expect(result.realized).toBe(200);
+  });
+
   it("should handle multiple mints", () => {
     const actions: Action[] = [
       createAction(TradeType.MINT, 1000, 100, 1),
@@ -66,5 +77,17 @@ describe("getCostAndRealized", () => {
     const result = getCostAndRealized(actions);
     expect(result.cost).toBe(500);
     expect(result.realized).toBe(0);
+  });
+
+  it("should handle complex sequence of mints and redemptions", () => {
+    const actions: Action[] = [
+      createAction(TradeType.MINT, 100, 57.253224453563575, 1),
+      createAction(TradeType.REDEEM, 19.922026, 10, 2),
+      createAction(TradeType.REDEEM, 40.918635, 20, 3),
+      createAction(TradeType.MINT, 59.928056, 32.7505554836724, 4),
+      createAction(TradeType.REDEEM, 115.510346, 60.003779937235976, 5),
+    ];
+    const result = getCostAndRealized(actions);
+    expect(result.realized).toBeCloseTo(16.4229510054, 5);
   });
 });
