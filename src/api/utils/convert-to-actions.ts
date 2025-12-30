@@ -6,8 +6,8 @@ export type ActionType = TradeType | TransferType;
 
 export interface Action {
   type: ActionType;
-  baseAmount: number;
-  leveragedTokenAmount: number;
+  baseAmount: bigint;
+  leveragedTokenAmount: bigint;
   time: Date;
 }
 
@@ -16,16 +16,16 @@ const convertToActions = (trades: Trade[], transfers: Transfer[]): Action[] => {
   for (const trade of trades) {
     actions.push({
       type: trade.type,
-      baseAmount: bigIntToNumber(trade.baseAssetAmount, 6),
-      leveragedTokenAmount: bigIntToNumber(trade.leveragedTokenAmount, 18),
+      baseAmount: trade.baseAssetAmount,
+      leveragedTokenAmount: trade.leveragedTokenAmount,
       time: trade.timestamp,
     });
   }
   for (const transfer of transfers) {
     actions.push({
       type: transfer.type,
-      baseAmount: 0,
-      leveragedTokenAmount: bigIntToNumber(transfer.amount, 18),
+      baseAmount: BigInt(0),
+      leveragedTokenAmount: transfer.amount,
       time: transfer.timestamp,
     });
   }

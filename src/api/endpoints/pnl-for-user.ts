@@ -3,8 +3,9 @@ import getTradesForUser from "../queries/trades-for-user";
 import getTransfersForUser from "../queries/transfers-for-user";
 import convertToActions from "../utils/convert-to-actions";
 import getLeveragedTokenData from "../utils/leveraged-token-data";
-import bigIntToNumber from "../utils/big-int-to-number";
+import { convertDecimals, mul } from "../utils/scaled-number";
 import getCostAndRealized from "../utils/get-cost-and-realized";
+import bigIntToNumber from "../utils/big-int-to-number";
 
 interface LeveragedTokenPnl {
   realized: number;
@@ -42,17 +43,20 @@ const getPnlForUser = async (user: Address) => {
     const ltTransfers = transfers.filter((t) => t.leveragedToken === lt);
     const actions = convertToActions(ltTrades, ltTransfers);
     const { cost, realized } = getCostAndRealized(actions);
-    const ltBalance = bigIntToNumber(data.balanceOf + data.credit, 18);
-    const exchangeRate = bigIntToNumber(data.exchangeRate, 18);
-    const currentValue = ltBalance * exchangeRate;
-    const unrealized = currentValue - cost;
-    const unrealizedPercent = cost === 0 ? 0 : unrealized / cost;
+    const realizedNumber = bigIntToNumber(realized, 6);
+    const costNumber = bigIntToNumber(cost, 6);
+    const costScaled = convertDecimals(cost, 6, 18);
+    const ltBalance = data.balanceOf + data.credit;
+    const exchangeRate = data.exchangeRate;
+    const currentValue = mul(ltBalance, exchangeRate);
+    const unrealized = bigIntToNumber(currentValue - costScaled, 18);
+    const unrealizedPercent = costNumber === 0 ? 0 : unrealized / costNumber;
     leveragedTokens[lt] = {
-      realized,
+      realized: realizedNumber,
       unrealized,
       unrealizedPercent: Number(unrealizedPercent.toFixed(6)),
     };
-    totalRealized += realized;
+    totalRealized += realizedNumber;
     totalUnrealized += unrealized;
   }
   const userPnl: UserPnl = {
