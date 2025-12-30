@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import getCostAndRealized from "./get-cost-and-realized";
 import { Action } from "./convert-to-actions";
+import { scaleNumber } from "./scaled-number";
+import bigIntToNumber from "./big-int-to-number";
 
 // Define enums locally to avoid importing from files with Ponder dependencies
 enum TradeType {
@@ -21,8 +23,8 @@ const createAction = (
 ): Action => {
   return {
     type,
-    baseAmount,
-    leveragedTokenAmount,
+    baseAmount: scaleNumber(baseAmount, 6),
+    leveragedTokenAmount: scaleNumber(leveragedTokenAmount, 18),
     time: new Date(order),
   };
 };
@@ -34,8 +36,8 @@ describe("getCostAndRealized", () => {
       createAction(TradeType.REDEEM, 1200, 100, 2),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.cost).toBe(0);
-    expect(result.realized).toBe(200);
+    expect(result.cost).toBe(0n);
+    expect(result.realized).toBe(scaleNumber(200, 6));
   });
 
   it("should handle partial redemption", () => {
@@ -44,8 +46,8 @@ describe("getCostAndRealized", () => {
       createAction(TradeType.REDEEM, 600, 50, 2),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.cost).toBe(500);
-    expect(result.realized).toBe(100);
+    expect(result.cost).toBe(scaleNumber(500, 6));
+    expect(result.realized).toBe(scaleNumber(100, 6));
   });
 
   it("should handle two stepped redemptions", () => {
@@ -55,8 +57,8 @@ describe("getCostAndRealized", () => {
       createAction(TradeType.REDEEM, 600, 50, 3),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.cost).toBe(0);
-    expect(result.realized).toBe(200);
+    expect(result.cost).toBe(0n);
+    expect(result.realized).toBe(scaleNumber(200, 6));
   });
 
   it("should handle multiple mints", () => {
@@ -65,8 +67,8 @@ describe("getCostAndRealized", () => {
       createAction(TradeType.MINT, 1500, 100, 2),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.cost).toBe(2500);
-    expect(result.realized).toBe(0);
+    expect(result.cost).toBe(scaleNumber(2500, 6));
+    expect(result.realized).toBe(0n);
   });
 
   it("should handle transfer out", () => {
@@ -75,8 +77,8 @@ describe("getCostAndRealized", () => {
       createAction(TransferType.TRANSFER_OUT, 0, 50, 2),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.cost).toBe(500);
-    expect(result.realized).toBe(0);
+    expect(result.cost).toBe(scaleNumber(500, 6));
+    expect(result.realized).toBe(0n);
   });
 
   it("should handle complex sequence of mints and redemptions", () => {
@@ -88,6 +90,6 @@ describe("getCostAndRealized", () => {
       createAction(TradeType.REDEEM, 115.510346, 60.003779937235976, 5),
     ];
     const result = getCostAndRealized(actions);
-    expect(result.realized).toBeCloseTo(16.4229510054, 5);
+    expect(bigIntToNumber(result.realized, 6)).toBeCloseTo(16.4229510054, 3);
   });
 });
