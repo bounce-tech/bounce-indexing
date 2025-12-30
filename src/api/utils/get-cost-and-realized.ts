@@ -13,8 +13,8 @@ const getCostAndRealized = (
 
   for (const action of actions) {
     const { leveragedTokenAmount, baseAmount, type } = action;
-    if (action.type === TransferType.TRANSFER_OUT) {
-      if (totalAmount <= 0) {
+    if (type === TransferType.TRANSFER_OUT) {
+      if (totalAmount <= 0n) {
         // Nothing to transfer out, skip to next trade to avoid division by zero
         continue;
       }
@@ -23,7 +23,7 @@ const getCostAndRealized = (
       totalAmount = mul(totalAmount, SCALE - percentageTransferred);
       continue;
     }
-    if (action.type === TradeType.MINT) {
+    if (type === TradeType.MINT) {
       // When minting, add to position and update average cost
       const tradeCost = baseAmount;
       const tradeAmount = leveragedTokenAmount;
@@ -33,7 +33,7 @@ const getCostAndRealized = (
       averageCost = totalAmount > 0n ? div(totalCost, totalAmount) : 0n;
       continue;
     }
-    if (action.type === TransferType.TRANSFER_IN) {
+    if (type === TransferType.TRANSFER_IN) {
       // Process transfer in as a mint
       const tradeCost = baseAmount;
       const tradeAmount = leveragedTokenAmount;
@@ -43,7 +43,7 @@ const getCostAndRealized = (
       averageCost = totalAmount > 0n ? div(totalCost, totalAmount) : 0n;
       continue;
     }
-    if (action.type === TradeType.REDEEM) {
+    if (type === TradeType.REDEEM) {
       // When redeeming, reduce position but keep same average cost
       const tradeAmount = leveragedTokenAmount;
       if (tradeAmount === 0n) continue;
