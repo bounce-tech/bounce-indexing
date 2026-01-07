@@ -8,7 +8,7 @@ import {
 interface AgentData {
   slot: number;
   agent: Address;
-  createdAt: number;
+  createdAt: bigint;
 }
 
 export interface LeveragedTokenData {
