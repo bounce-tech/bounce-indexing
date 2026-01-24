@@ -46,7 +46,7 @@ const getPnlForUser = async (user: Address) => {
     const realizedNumber = bigIntToNumber(realized, 6);
     const costNumber = bigIntToNumber(cost, 6);
     const costScaled = convertDecimals(cost, 6, 18);
-    const ltBalance = data.balanceOf + data.credit;
+    const ltBalance = data.balanceOf + data.userCredit;
     const exchangeRate = data.exchangeRate;
     const currentValue = mul(ltBalance, exchangeRate);
     const unrealized = bigIntToNumber(currentValue - costScaled, 18);
