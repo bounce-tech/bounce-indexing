@@ -40,7 +40,6 @@ The dev server will:
 - Connect to the database
 - Start indexing from the configured start block
 - Serve the GraphQL API at `http://localhost:42069/graphql`
-- Serve SQL over HTTP at `http://localhost:42069/sql`
 - Serve custom REST API endpoints at `http://localhost:42069`:
   - `/stats` - Protocol statistics
   - `/traded-lts` - Leveraged tokens traded by a user
@@ -178,10 +177,6 @@ query MyQuery {
 }
 ```
 
-### SQL over HTTP
-
-Query tables directly using SQL over HTTP at `http://localhost:42069/sql`.
-
 ### API
 
 The API provides custom REST endpoints for querying leveraged token data. All endpoints are served at `http://localhost:42069` and use GET requests.
@@ -195,7 +190,6 @@ The API provides custom REST endpoints for querying leveraged token data. All en
 | `/users-trades` | GET      | Get all trades for a user              | `user`              |
 | `/user-pnl`     | GET      | Get profit and loss for a user         | `user`              |
 | `/graphql`      | GET/POST | GraphQL API endpoint                   | N/A                 |
-| `/sql/*`        | GET/POST | SQL over HTTP endpoint                 | N/A                 |
 
 #### Response Format
 
