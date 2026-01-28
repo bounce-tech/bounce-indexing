@@ -178,10 +178,6 @@ query MyQuery {
 }
 ```
 
-### SQL over HTTP
-
-Query tables directly using SQL over HTTP at `http://localhost:42069/sql`.
-
 ### API
 
 The API provides custom REST endpoints for querying leveraged token data. All endpoints are served at `http://localhost:42069` and use GET requests.
