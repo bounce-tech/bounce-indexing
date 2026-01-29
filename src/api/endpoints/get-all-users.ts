@@ -1,5 +1,6 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
+import { gt } from "drizzle-orm";
 
 const getAllUsers = async () => {
   try {
@@ -15,7 +16,8 @@ const getAllUsers = async () => {
         totalVolumeNotional: schema.user.totalVolumeNotional,
         lastTradeTimestamp: schema.user.lastTradeTimestamp,
       })
-      .from(schema.user);
+      .from(schema.user)
+      .where(gt(schema.user.tradeCount, 0));
     return users;
   } catch (error) {
     throw new Error("Failed to fetch all users");
