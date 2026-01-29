@@ -11,6 +11,9 @@ import { bigIntSerializationMiddleware } from "./utils/serialize-bigint";
 import getTotalRebatesForUser from "./endpoints/total-rebates-for-user";
 import getTotalReferralsForUser from "./endpoints/total-referrals-for-user";
 import getLatestTrades from "./endpoints/latest-trades";
+import getAllUsers from "./endpoints/get-all-users";
+import getUser from "./endpoints/get-user";
+import getReferrers from "./endpoints/get-referrers";
 
 const app = new Hono();
 
@@ -117,6 +120,40 @@ app.get("/latest-trades", async (c) => {
     return c.json(formatSuccess(trades));
   } catch (error) {
     return c.json(formatError("Failed to fetch latest trades"), 500);
+  }
+});
+
+// All users endpoint
+app.get("/users", async (c) => {
+  try {
+    const users = await getAllUsers();
+    return c.json(formatSuccess(users));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch all users"), 500);
+  }
+});
+
+// Single user endpoint
+app.get("/user", async (c) => {
+  try {
+    const user = c.req.query("user");
+    if (!user) return c.json(formatError("Missing user parameter"), 400);
+    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+    const userData = await getUser(user);
+    if (!userData) return c.json(formatError("User not found"), 404);
+    return c.json(formatSuccess(userData));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch user"), 500);
+  }
+});
+
+// Referrers endpoint
+app.get("/referrers", async (c) => {
+  try {
+    const referrers = await getReferrers();
+    return c.json(formatSuccess(referrers));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch referrers"), 500);
   }
 });
 
