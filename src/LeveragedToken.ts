@@ -2,6 +2,7 @@ import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import crypto from "crypto";
 import { ensureUser } from "./utils/ensure-user";
+import { getTargetLeverage } from "./utils/get-target-leverage";
 
 // event Mint(address indexed minter, address indexed to, uint256 baseAmount, uint256 ltAmount);
 ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
@@ -20,17 +21,16 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
   });
 
   // Update user stats
-  const leveragedToken = await context.db.find(schema.leveragedToken, {
-    address: event.log.address,
-  });
-  if (!leveragedToken) throw new Error("Leveraged token not found");
-
   await ensureUser(context.db, to);
   const user = await context.db.find(schema.user, { address: to });
   if (!user) throw new Error("User not found");
-
-  const notionalVolume = (baseAmount * leveragedToken.targetLeverage) / BigInt(1e18);
-
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    context.client,
+    context.contracts,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await context.db.update(schema.user, { address: to }).set({
     tradeCount: user.tradeCount + 1,
     mintVolumeNominal: user.mintVolumeNominal + baseAmount,
@@ -58,17 +58,16 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
   });
 
   // Update user stats
-  const leveragedToken = await context.db.find(schema.leveragedToken, {
-    address: event.log.address,
-  });
-  if (!leveragedToken) throw new Error("Leveraged token not found");
-
   await ensureUser(context.db, to);
   const user = await context.db.find(schema.user, { address: to });
   if (!user) throw new Error("User not found");
-
-  const notionalVolume = (baseAmount * leveragedToken.targetLeverage) / BigInt(1e18);
-
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    context.client,
+    context.contracts,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await context.db.update(schema.user, { address: to }).set({
     tradeCount: user.tradeCount + 1,
     redeemVolumeNominal: user.redeemVolumeNominal + baseAmount,
@@ -96,17 +95,16 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
   });
 
   // Update user stats
-  const leveragedToken = await context.db.find(schema.leveragedToken, {
-    address: event.log.address,
-  });
-  if (!leveragedToken) throw new Error("Leveraged token not found");
-
   await ensureUser(context.db, user);
   const userData = await context.db.find(schema.user, { address: user });
   if (!userData) throw new Error("User not found");
-
-  const notionalVolume = (baseAmount * leveragedToken.targetLeverage) / BigInt(1e18);
-
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    context.client,
+    context.contracts,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await context.db.update(schema.user, { address: user }).set({
     tradeCount: userData.tradeCount + 1,
     redeemVolumeNominal: userData.redeemVolumeNominal + baseAmount,
