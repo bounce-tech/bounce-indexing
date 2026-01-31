@@ -1,4 +1,4 @@
-import { onchainTable, relations } from "ponder";
+import { onchainTable, relations, primaryKey } from "ponder";
 
 export const leveragedToken = onchainTable("leveragedToken", (t) => ({
   address: t.hex().primaryKey(),
@@ -62,12 +62,25 @@ export const fee = onchainTable("fee", (t) => ({
   destination: t.text().notNull(),
 }));
 
+export const balance = onchainTable(
+  "balance",
+  (t) => ({
+    user: t.hex().notNull(),
+    leveragedToken: t.hex().notNull(),
+    amount: t.bigint().notNull().default(0n),
+  }),
+  (table) => ({
+    pk: primaryKey({ columns: [table.user, table.leveragedToken] }),
+  })
+);
+
 export const leveragedTokensRelations = relations(
   leveragedToken,
   ({ many }) => ({
     trades: many(trade),
     transfers: many(transfer),
     fees: many(fee),
+    balances: many(balance),
   })
 );
 
@@ -90,4 +103,19 @@ export const feesRelations = relations(fee, ({ one }) => ({
     fields: [fee.leveragedToken],
     references: [leveragedToken.address],
   }),
+}));
+
+export const balancesRelations = relations(balance, ({ one }) => ({
+  user: one(user, {
+    fields: [balance.user],
+    references: [user.address],
+  }),
+  leveragedToken: one(leveragedToken, {
+    fields: [balance.leveragedToken],
+    references: [leveragedToken.address],
+  }),
+}));
+
+export const usersRelations = relations(user, ({ many }) => ({
+  balances: many(balance),
 }));
