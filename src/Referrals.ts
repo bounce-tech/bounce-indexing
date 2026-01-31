@@ -48,7 +48,7 @@ ponder.on("Referrals:DonateRebate", async ({ event, context }) => {
     await context.db
       .update(schema.user, { address: to })
       .set((row) => ({
-        referreeRebates: row.referreeRebates + refereeRebate,
+        refereeRebates: row.refereeRebates + refereeRebate,
         totalRebates: row.totalRebates + refereeRebate,
       }));
   }

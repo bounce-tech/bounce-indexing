@@ -102,7 +102,7 @@ Stores user information including referral relationships and rebate tracking.
 - `referredUserCount`: Number of users referred by this user
 - `totalRebates`: Total rebates earned by the user (as referrer and referee)
 - `referrerRebates`: Rebates earned as a referrer
-- `referreeRebates`: Rebates earned as a referee
+- `refereeRebates`: Rebates earned as a referee
 - `claimedRebates`: Rebates that have been claimed
 - `tradeCount`: Total number of trades made by the user
 - `mintVolumeNominal`: Total mint volume in nominal terms

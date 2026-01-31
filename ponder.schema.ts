@@ -42,7 +42,7 @@ export const user = onchainTable("user", (t) => ({
   referredUserCount: t.integer().notNull().default(0),
   totalRebates: t.bigint().notNull().default(0n),
   referrerRebates: t.bigint().notNull().default(0n),
-  referreeRebates: t.bigint().notNull().default(0n),
+  refereeRebates: t.bigint().notNull().default(0n),
   claimedRebates: t.bigint().notNull().default(0n),
   tradeCount: t.integer().notNull().default(0),
   mintVolumeNominal: t.bigint().notNull().default(0n),
