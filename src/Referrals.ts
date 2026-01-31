@@ -24,9 +24,9 @@ ponder.on("Referrals:JoinWithReferral", async ({ event, context }) => {
     .set({ referrerCode: referralCode, referrerAddress: referrer });
 
   // Update the referrer: increment referredUserCount by 1
-  const referredUserCount = await context.db.find(schema.user, { address: referrer });
-  if (!referredUserCount) throw new Error("Referrer not found");
-  await context.db.update(schema.user, { address: referrer }).set({ referredUserCount: referredUserCount.referredUserCount + 1 });
+  const referrerUser = await context.db.find(schema.user, { address: referrer });
+  if (!referrerUser) throw new Error("Referrer not found");
+  await context.db.update(schema.user, { address: referrer }).set({ referredUserCount: referrerUser.referredUserCount + 1 });
 });
 
 // event ClaimRebate(address indexed sender, address indexed to, uint256 rebate);
