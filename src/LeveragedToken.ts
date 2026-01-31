@@ -22,8 +22,6 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
 
   // Update user stats
   await ensureUser(context.db, to);
-  const user = await context.db.find(schema.user, { address: to });
-  if (!user) throw new Error("User not found");
   const targetLeverage = await getTargetLeverage(
     context.db,
     context.client,
@@ -31,14 +29,16 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
     event.log.address
   );
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
-  await context.db.update(schema.user, { address: to }).set({
-    tradeCount: user.tradeCount + 1,
-    mintVolumeNominal: user.mintVolumeNominal + baseAmount,
-    totalVolumeNominal: user.totalVolumeNominal + baseAmount,
-    mintVolumeNotional: user.mintVolumeNotional + notionalVolume,
-    totalVolumeNotional: user.totalVolumeNotional + notionalVolume,
-    lastTradeTimestamp: event.block.timestamp,
-  });
+  await context.db
+    .update(schema.user, { address: to })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      mintVolumeNominal: row.mintVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      mintVolumeNotional: row.mintVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event Redeem(address indexed sender, address indexed to, uint256 ltAmount, uint256 baseAmount);
@@ -59,8 +59,6 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
 
   // Update user stats
   await ensureUser(context.db, to);
-  const user = await context.db.find(schema.user, { address: to });
-  if (!user) throw new Error("User not found");
   const targetLeverage = await getTargetLeverage(
     context.db,
     context.client,
@@ -68,14 +66,16 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
     event.log.address
   );
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
-  await context.db.update(schema.user, { address: to }).set({
-    tradeCount: user.tradeCount + 1,
-    redeemVolumeNominal: user.redeemVolumeNominal + baseAmount,
-    totalVolumeNominal: user.totalVolumeNominal + baseAmount,
-    redeemVolumeNotional: user.redeemVolumeNotional + notionalVolume,
-    totalVolumeNotional: user.totalVolumeNotional + notionalVolume,
-    lastTradeTimestamp: event.block.timestamp,
-  });
+  await context.db
+    .update(schema.user, { address: to })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      redeemVolumeNominal: row.redeemVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event ExecuteRedeem(address indexed user, uint256 ltAmount, uint256 baseAmount);
@@ -96,8 +96,6 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
 
   // Update user stats
   await ensureUser(context.db, user);
-  const userData = await context.db.find(schema.user, { address: user });
-  if (!userData) throw new Error("User not found");
   const targetLeverage = await getTargetLeverage(
     context.db,
     context.client,
@@ -105,14 +103,16 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
     event.log.address
   );
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
-  await context.db.update(schema.user, { address: user }).set({
-    tradeCount: userData.tradeCount + 1,
-    redeemVolumeNominal: userData.redeemVolumeNominal + baseAmount,
-    totalVolumeNominal: userData.totalVolumeNominal + baseAmount,
-    redeemVolumeNotional: userData.redeemVolumeNotional + notionalVolume,
-    totalVolumeNotional: userData.totalVolumeNotional + notionalVolume,
-    lastTradeTimestamp: event.block.timestamp,
-  });
+  await context.db
+    .update(schema.user, { address: user })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      redeemVolumeNominal: row.redeemVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event Transfer(address indexed from, address indexed to, uint256 value);
