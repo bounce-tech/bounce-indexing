@@ -16,6 +16,7 @@ ponder.on("Referrals:AddReferrer", async ({ event, context }) => {
 ponder.on("Referrals:JoinWithReferral", async ({ event, context }) => {
   const { referee, referrer, referralCode } = event.args;
   await ensureUser(context.db, referee);
+  await ensureUser(context.db, referrer);
 
   // Update the referee: set referrerCode and referrerAddress
   await context.db
