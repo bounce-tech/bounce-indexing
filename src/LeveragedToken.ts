@@ -1,9 +1,9 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import crypto from "crypto";
+import { zeroAddress } from "viem";
 import { ensureUser } from "./utils/ensure-user";
 import { getTargetLeverage } from "./utils/get-target-leverage";
-import { ZERO_ADDRESS } from "./constants";
 import { ensureBalance } from "./utils/ensure-balance";
 
 // event Mint(address indexed minter, address indexed to, uint256 baseAmount, uint256 ltAmount);
@@ -132,7 +132,7 @@ ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
     txHash: event.transaction?.hash ?? "",
   });
 
-  if (from !== ZERO_ADDRESS) {
+  if (from !== zeroAddress) {
     await ensureUser(context.db, from);
     await ensureBalance(context.db, from, leveragedToken);
     await context.db
@@ -145,7 +145,7 @@ ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
       }));
   }
 
-  if (to !== ZERO_ADDRESS) {
+  if (to !== zeroAddress) {
     await ensureUser(context.db, to);
     await ensureBalance(context.db, to, leveragedToken);
     await context.db
