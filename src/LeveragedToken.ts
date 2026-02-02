@@ -1,10 +1,17 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import crypto from "crypto";
+import { ensureUser } from "./utils/ensure-user";
+import { getTargetLeverage } from "./utils/get-target-leverage";
+import { FACTORY_ADDRESS } from "@bouncetech/contracts";
+import addressMatch from "./utils/address-match";
 
 // event Mint(address indexed minter, address indexed to, uint256 baseAmount, uint256 ltAmount);
 ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
   const { minter, to, baseAmount, ltAmount } = event.args;
+
+  // Solving an issue where the factory mints some tokens before emitting the CreateLeveragedToken event
+  if (addressMatch(minter, FACTORY_ADDRESS)) return;
 
   await context.db.insert(schema.trade).values({
     id: crypto.randomUUID(),
@@ -17,6 +24,24 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
     leveragedTokenAmount: ltAmount,
     txHash: event.transaction?.hash ?? "",
   });
+
+  // Update user stats
+  await ensureUser(context.db, to);
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
+  await context.db
+    .update(schema.user, { address: to })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      mintVolumeNominal: row.mintVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      mintVolumeNotional: row.mintVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event Redeem(address indexed sender, address indexed to, uint256 ltAmount, uint256 baseAmount);
@@ -34,6 +59,24 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
     leveragedTokenAmount: ltAmount,
     txHash: event.transaction?.hash ?? "",
   });
+
+  // Update user stats
+  await ensureUser(context.db, to);
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
+  await context.db
+    .update(schema.user, { address: to })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      redeemVolumeNominal: row.redeemVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event ExecuteRedeem(address indexed user, uint256 ltAmount, uint256 baseAmount);
@@ -51,6 +94,24 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
     leveragedTokenAmount: ltAmount,
     txHash: event.transaction?.hash ?? "",
   });
+
+  // Update user stats
+  await ensureUser(context.db, user);
+  const targetLeverage = await getTargetLeverage(
+    context.db,
+    event.log.address
+  );
+  const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
+  await context.db
+    .update(schema.user, { address: user })
+    .set((row) => ({
+      tradeCount: row.tradeCount + 1,
+      redeemVolumeNominal: row.redeemVolumeNominal + baseAmount,
+      totalVolumeNominal: row.totalVolumeNominal + baseAmount,
+      redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
+      totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
+      lastTradeTimestamp: event.block.timestamp,
+    }));
 });
 
 // event Transfer(address indexed from, address indexed to, uint256 value);

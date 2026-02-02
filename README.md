@@ -45,6 +45,9 @@ The dev server will:
   - `/users-trades` - All trades for a user
   - `/user-pnl` - Profit and loss for a user
   - `/latest-trades` - Latest 100 trades across all users
+  - `/users` - All users from the user table
+  - `/user` - Data for a single user
+  - `/referrers` - All users with referral codes (referrers only)
 
 ## Schema
 
@@ -88,23 +91,27 @@ Stores ERC-20 token transfers for leveraged tokens.
 - `amount`: Amount of tokens transferred
 - `txHash`: Transaction hash of the transfer
 
-### `referral`
+### `user`
 
-Stores user referral registrations.
+Stores user information including referral relationships and rebate tracking.
 
-- `id` (primary key): Unique referral identifier
-- `user`: Address of the user who joined with a referral code
-- `code`: Referral code used
-- `referrer`: Address of the referrer
-
-### `rebate`
-
-Stores rebate claims from the referral system.
-
-- `id` (primary key): Unique rebate identifier
-- `sender`: Address that claimed the rebate
-- `to`: Address that received the rebate
-- `rebate`: Amount of rebate claimed
+- `address` (primary key): User's Ethereum address
+- `referralCode`: The user's own referral code
+- `referrerCode`: The referral code the user used when joining
+- `referrerAddress`: Address of the user's referrer
+- `referredUserCount`: Number of users referred by this user
+- `totalRebates`: Total rebates earned by the user (as referrer and referee)
+- `referrerRebates`: Rebates earned as a referrer
+- `refereeRebates`: Rebates earned as a referee
+- `claimedRebates`: Rebates that have been claimed
+- `tradeCount`: Total number of trades made by the user
+- `mintVolumeNominal`: Total mint volume in nominal terms
+- `redeemVolumeNominal`: Total redeem volume in nominal terms
+- `totalVolumeNominal`: Total volume in nominal terms
+- `mintVolumeNotional`: Total mint volume in notional terms
+- `redeemVolumeNotional`: Total redeem volume in notional terms
+- `totalVolumeNotional`: Total volume in notional terms
+- `lastTradeTimestamp`: Timestamp of the user's last trade
 
 ### `fee`
 
@@ -144,8 +151,10 @@ The project indexes events from the Bounce Tech protocol:
    - `SendFeesToTreasury`: Records fees paid from leveraged tokens
 
 3. **Bounce Tech Referrals Contract** (address imported from `@bouncetech/contracts` package)
-   - `JoinWithReferral`: Records when users join with a referral code
+   - `AddReferrer`: Records when a user registers their referral code
+   - `JoinWithReferral`: Records when users join with a referral code and links referee to referrer
    - `ClaimRebate`: Records rebate claims from the referral system
+   - `DonateRebate`: Records rebate distributions to referrers and referees
 
 The indexer uses block-based indexing starting from block `21549398` and processes new blocks in real-time.
 
@@ -190,6 +199,9 @@ By using this API, you agree to use it in a manner that respects the service and
 | `/total-rebates`  | GET      | Get total rebates claimed by a user    | `user`              |
 | `/total-referrals`| GET      | Get total referrals made by a user     | `user`              |
 | `/latest-trades`  | GET      | Get latest 100 trades across all users | None                |
+| `/users`          | GET      | Get all users from the user table      | None                |
+| `/user`           | GET      | Get data for a single user             | `user`              |
+| `/referrers`      | GET      | Get all users with referral codes      | None                |
 
 #### Response Format
 
@@ -476,7 +488,7 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
 
 #### Total Rebates Endpoint
 
-Get the number value of rebates a user has claimed at `http://localhost:42069/total-rebates`.
+Get the total rebates earned by a user at `http://localhost:42069/total-rebates`.
 
 **Query Parameters:**
 
@@ -484,7 +496,7 @@ Get the number value of rebates a user has claimed at `http://localhost:42069/to
 
 **Response Data:**
 
-- Number representing the value of rebates the user has claimed
+- Number representing the total rebates earned by the user (includes both referrer and referee rebates)
 
 **Example Request:**
 
@@ -616,6 +628,188 @@ GET http://localhost:42069/latest-trades
 **Error Responses:**
 
 - None (always returns success with an array, which may be empty if there are no trades)
+
+#### All Users Endpoint
+
+Get all users from the user table at `http://localhost:42069/users`.
+
+**Query Parameters:**
+
+- None
+
+**Response Data:**
+
+- Array of user objects, each containing trading and volume data:
+  - `address`: User's Ethereum address (primary key)
+  - `tradeCount`: Total number of trades made by the user (integer)
+  - `mintVolumeNominal`: Total mint volume in nominal terms (as string, serialized from BigInt)
+  - `redeemVolumeNominal`: Total redeem volume in nominal terms (as string, serialized from BigInt)
+  - `totalVolumeNominal`: Total volume in nominal terms (as string, serialized from BigInt)
+  - `mintVolumeNotional`: Total mint volume in notional terms (as string, serialized from BigInt)
+  - `redeemVolumeNotional`: Total redeem volume in notional terms (as string, serialized from BigInt)
+  - `totalVolumeNotional`: Total volume in notional terms (as string, serialized from BigInt)
+  - `lastTradeTimestamp`: Timestamp of the user's last trade (as string, serialized from BigInt)
+
+**Note:** This endpoint excludes referral-related fields. For referral data, use the `/referrers` endpoint.
+
+**Example Request:**
+
+```
+GET http://localhost:42069/users
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "address": "0x1234567890123456789012345678901234567890",
+      "tradeCount": 42,
+      "mintVolumeNominal": "10000000000",
+      "redeemVolumeNominal": "8000000000",
+      "totalVolumeNominal": "18000000000",
+      "mintVolumeNotional": "50000000000",
+      "redeemVolumeNotional": "40000000000",
+      "totalVolumeNotional": "90000000000",
+      "lastTradeTimestamp": "1704067200"
+    },
+    {
+      "address": "0x9876543210987654321098765432109876543210",
+      "tradeCount": 10,
+      "mintVolumeNominal": "5000000000",
+      "redeemVolumeNominal": "3000000000",
+      "totalVolumeNominal": "8000000000",
+      "mintVolumeNotional": "25000000000",
+      "redeemVolumeNotional": "15000000000",
+      "totalVolumeNotional": "40000000000",
+      "lastTradeTimestamp": "1704153600"
+    }
+  ],
+  "error": null
+}
+```
+
+**Error Responses:**
+
+- `500 Internal Server Error`: Failed to fetch all users
+
+#### Single User Endpoint
+
+Get data for a single user by address at `http://localhost:42069/user`.
+
+**Query Parameters:**
+
+- `user` (required): Ethereum address of the user
+
+**Response Data:**
+
+- User object containing trading and volume data (same structure as in the All Users endpoint):
+  - `address`: User's Ethereum address (primary key)
+  - `tradeCount`: Total number of trades made by the user (integer)
+  - `mintVolumeNominal`: Total mint volume in nominal terms (as string, serialized from BigInt)
+  - `redeemVolumeNominal`: Total redeem volume in nominal terms (as string, serialized from BigInt)
+  - `totalVolumeNominal`: Total volume in nominal terms (as string, serialized from BigInt)
+  - `mintVolumeNotional`: Total mint volume in notional terms (as string, serialized from BigInt)
+  - `redeemVolumeNotional`: Total redeem volume in notional terms (as string, serialized from BigInt)
+  - `totalVolumeNotional`: Total volume in notional terms (as string, serialized from BigInt)
+  - `lastTradeTimestamp`: Timestamp of the user's last trade (as string, serialized from BigInt)
+
+**Note:** This endpoint excludes referral-related fields. For referral data, use the `/referrers` endpoint.
+
+**Example Request:**
+
+```
+GET http://localhost:42069/user?user=0x1234567890123456789012345678901234567890
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "address": "0x1234567890123456789012345678901234567890",
+    "tradeCount": 42,
+    "mintVolumeNominal": "10000000000",
+    "redeemVolumeNominal": "8000000000",
+    "totalVolumeNominal": "18000000000",
+    "mintVolumeNotional": "50000000000",
+    "redeemVolumeNotional": "40000000000",
+    "totalVolumeNotional": "90000000000",
+    "lastTradeTimestamp": "1704067200"
+  },
+  "error": null
+}
+```
+
+**Example Error Response:**
+
+```json
+{
+  "status": "error",
+  "data": null,
+  "error": "Missing user parameter"
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Missing or invalid user address parameter
+- `404 Not Found`: User not found in the database
+- `500 Internal Server Error`: Failed to fetch user
+
+#### Referrers Endpoint
+
+Get all users who have registered a referral code at `http://localhost:42069/referrers`.
+
+**Query Parameters:**
+
+- None
+
+**Response Data:**
+
+- Array of referrer objects, each containing only referral-related fields:
+  - `address`: User's Ethereum address (primary key)
+  - `referralCode`: The user's own referral code
+  - `referred`: Number of users referred by this user (integer)
+  - `earned`: Rebates earned as a referrer (as string, serialized from BigInt)
+
+**Note:** This endpoint only returns users who have a `referralCode` (i.e., they are referrers). Volume and trade count fields are excluded as they are not directly related to referrals.
+
+**Example Request:**
+
+```
+GET http://localhost:42069/referrers
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "address": "0x1234567890123456789012345678901234567890",
+      "referralCode": "ABC123",
+      "referred": 5,
+      "earned": "1000000000"
+    },
+    {
+      "address": "0x9876543210987654321098765432109876543210",
+      "referralCode": "XYZ789",
+      "referred": 0,
+      "earned": "200000000"
+    }
+  ],
+  "error": null
+}
+```
+
+**Error Responses:**
+
+- `500 Internal Server Error`: Failed to fetch referrers
 
 ## Scripts
 
