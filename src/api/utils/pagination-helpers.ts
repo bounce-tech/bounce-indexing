@@ -70,7 +70,7 @@ export function calculatePageInfo<T>(
     return {
         startCursor,
         endCursor,
-        hasPreviousPage: !!before || (!!after && hasMore),
-        hasNextPage: hasMore,
+        hasPreviousPage: before ? hasMore : !!after,
+        hasNextPage: before ? true : hasMore,
     };
 }
