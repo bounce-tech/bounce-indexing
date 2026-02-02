@@ -1,8 +1,10 @@
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
 import crypto from "crypto";
+import { zeroAddress } from "viem";
 import { ensureUser } from "./utils/ensure-user";
 import { getTargetLeverage } from "./utils/get-target-leverage";
+import { ensureBalance } from "./utils/ensure-balance";
 import { FACTORY_ADDRESS } from "@bouncetech/contracts";
 import addressMatch from "./utils/address-match";
 
@@ -117,6 +119,7 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
 // event Transfer(address indexed from, address indexed to, uint256 value);
 ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
+  const leveragedToken = event.log.address;
 
   await context.db.insert(schema.transfer).values({
     id: crypto.randomUUID(),
@@ -127,6 +130,32 @@ ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
     amount: value,
     txHash: event.transaction?.hash ?? "",
   });
+
+  if (from !== zeroAddress) {
+    await ensureUser(context.db, from);
+    await ensureBalance(context.db, from, leveragedToken);
+    await context.db
+      .update(schema.balance, {
+        user: from,
+        leveragedToken,
+      })
+      .set((row) => ({
+        amount: row.amount - value,
+      }));
+  }
+
+  if (to !== zeroAddress) {
+    await ensureUser(context.db, to);
+    await ensureBalance(context.db, to, leveragedToken);
+    await context.db
+      .update(schema.balance, {
+        user: to,
+        leveragedToken,
+      })
+      .set((row) => ({
+        amount: row.amount + value,
+      }));
+  }
 });
 
 // event SendFeesToTreasury(uint256 amount);
