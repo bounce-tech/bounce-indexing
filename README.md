@@ -48,6 +48,8 @@ The dev server will:
   - `/users` - All users from the user table
   - `/user` - Data for a single user
   - `/referrers` - All users with referral codes (referrers only)
+  - `/leveraged-tokens` - All leveraged tokens
+  - `/leveraged-tokens/:leveragedTokenAddress` - Data for a single leveraged token
 
 ## Schema
 
@@ -202,6 +204,8 @@ By using this API, you agree to use it in a manner that respects the service and
 | `/users`          | GET      | Get all users from the user table      | None                |
 | `/user`           | GET      | Get data for a single user             | `user`              |
 | `/referrers`      | GET      | Get all users with referral codes      | None                |
+| `/leveraged-tokens` | GET   | Get all leveraged tokens               | None                |
+| `/leveraged-tokens/:leveragedTokenAddress` | GET | Get data for a single leveraged token | `leveragedTokenAddress` (path parameter) |
 
 #### Response Format
 
@@ -870,6 +874,133 @@ GET http://localhost:42069/referrers
 **Error Responses:**
 
 - `500 Internal Server Error`: Failed to fetch referrers
+
+#### All Leveraged Tokens Endpoint
+
+Get all leveraged tokens from the database at `http://localhost:42069/leveraged-tokens`.
+
+**Query Parameters:**
+
+- None
+
+**Response Data:**
+
+- Array of leveraged token objects, each containing:
+  - `address`: Leveraged token contract address (primary key)
+  - `marketId`: Market identifier (integer)
+  - `targetLeverage`: Target leverage amount (as string, serialized from BigInt)
+  - `isLong`: Whether the token is a long position (boolean)
+  - `symbol`: ERC-20 symbol (string)
+  - `name`: ERC-20 name (string)
+  - `decimals`: ERC-20 decimals (integer)
+  - `asset`: Base asset symbol (string)
+  - `exchangeRate`: Current exchange rate (as string, serialized from BigInt)
+
+**Example Request:**
+
+```
+GET http://localhost:42069/leveraged-tokens
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "address": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
+      "marketId": 1,
+      "targetLeverage": "1000000000000000000",
+      "isLong": true,
+      "symbol": "3L-USDC",
+      "name": "3x Long USDC",
+      "decimals": 18,
+      "asset": "USDC",
+      "exchangeRate": "1050000000000000000"
+    },
+    {
+      "address": "0x22a7a4a38a97ca44473548036f22a7bcd2c25457",
+      "marketId": 1,
+      "targetLeverage": "2000000000000000000",
+      "isLong": false,
+      "symbol": "2S-USDC",
+      "name": "2x Short USDC",
+      "decimals": 18,
+      "asset": "USDC",
+      "exchangeRate": "980000000000000000"
+    }
+  ],
+  "error": null
+}
+```
+
+**Error Responses:**
+
+- `500 Internal Server Error`: Failed to fetch leveraged tokens
+
+#### Single Leveraged Token Endpoint
+
+Get data for a single leveraged token by address at `http://localhost:42069/leveraged-tokens/:leveragedTokenAddress`.
+
+**Path Parameters:**
+
+- `leveragedTokenAddress` (required): Ethereum address of the leveraged token contract
+
+**Response Data:**
+
+- Leveraged token object containing:
+  - `address`: Leveraged token contract address (primary key)
+  - `marketId`: Market identifier (integer)
+  - `targetLeverage`: Target leverage amount (as string, serialized from BigInt)
+  - `isLong`: Whether the token is a long position (boolean)
+  - `symbol`: ERC-20 symbol (string)
+  - `name`: ERC-20 name (string)
+  - `decimals`: ERC-20 decimals (integer)
+  - `asset`: Base asset symbol (string)
+  - `exchangeRate`: Current exchange rate (as string, serialized from BigInt)
+
+**Example Request:**
+
+```
+GET http://localhost:42069/leveraged-tokens/0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
+```
+
+**Example Success Response:**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "address": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
+    "marketId": 1,
+    "targetLeverage": "1000000000000000000",
+    "isLong": true,
+    "symbol": "3L-USDC",
+    "name": "3x Long USDC",
+    "decimals": 18,
+    "asset": "USDC",
+    "exchangeRate": "1050000000000000000"
+  },
+  "error": null
+}
+```
+
+**Example Error Response:**
+
+```json
+{
+  "status": "error",
+  "data": null,
+  "error": "Leveraged token not found"
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request`: Missing or invalid leveraged token address parameter
+- `404 Not Found`: Leveraged token not found in the database
+- `500 Internal Server Error`: Failed to fetch leveraged token
 
 ## Scripts
 

@@ -14,6 +14,8 @@ import getLatestTrades from "./endpoints/latest-trades";
 import getAllUsers from "./endpoints/get-all-users";
 import getUser from "./endpoints/get-user";
 import getReferrers from "./endpoints/get-referrers";
+import getAllLeveragedTokens from "./endpoints/get-all-leveraged-tokens";
+import getLeveragedToken from "./endpoints/get-leveraged-token";
 import { validatePaginationParams } from "./utils/validate";
 
 const app = new Hono();
@@ -190,6 +192,30 @@ app.get("/referrers", async (c) => {
     return c.json(formatSuccess(referrers));
   } catch (error) {
     return c.json(formatError("Failed to fetch referrers"), 500);
+  }
+});
+
+// All leveraged tokens endpoint
+app.get("/leveraged-tokens", async (c) => {
+  try {
+    const leveragedTokens = await getAllLeveragedTokens();
+    return c.json(formatSuccess(leveragedTokens));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch leveraged tokens"), 500);
+  }
+});
+
+// Single leveraged token endpoint
+app.get("/leveraged-tokens/:leveragedTokenAddress", async (c) => {
+  try {
+    const leveragedTokenAddress = c.req.param("leveragedTokenAddress");
+    if (!leveragedTokenAddress) return c.json(formatError("Missing leveraged token address parameter"), 400);
+    if (!isAddress(leveragedTokenAddress)) return c.json(formatError("Invalid leveraged token address"), 400);
+    const leveragedToken = await getLeveragedToken(leveragedTokenAddress as Address);
+    if (!leveragedToken) return c.json(formatError("Leveraged token not found"), 404);
+    return c.json(formatSuccess(leveragedToken));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch leveraged token"), 500);
   }
 });
 
