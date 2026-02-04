@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 export interface Balance {
   totalBalance: bigint;
   purchaseCost: bigint;
+  realizedProfit: bigint;
 }
 
 const getBalancesForUser = async (user: Address): Promise<Record<Address, Balance>> => {
@@ -26,6 +27,7 @@ const getBalancesForUser = async (user: Address): Promise<Record<Address, Balanc
       acc[balance.leveragedToken as Address] = {
         totalBalance: balance.totalBalance,
         purchaseCost: balance.purchaseCost,
+        realizedProfit: balance.realizedProfit,
       };
       return acc;
     }, {} as Record<Address, Balance>);

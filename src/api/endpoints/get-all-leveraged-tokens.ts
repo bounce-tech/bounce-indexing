@@ -1,10 +1,12 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
+import { Address } from "viem";
+import bigIntToNumber from "../utils/big-int-to-number";
 
 export interface LeveragedTokenSummary {
-  address: string;
+  address: Address;
   marketId: number;
-  targetLeverage: bigint;
+  targetLeverage: number;
   isLong: boolean;
   symbol: string;
   name: string;
@@ -29,9 +31,12 @@ const getAllLeveragedTokens = async (): Promise<LeveragedTokenSummary[]> => {
   try {
     const leveragedTokens = await db
       .select(leveragedTokenSelect)
-      .from(schema.leveragedToken);
+      .from(schema.leveragedToken)
 
-    return leveragedTokens;
+    return leveragedTokens.map((lt) => ({
+      ...lt,
+      targetLeverage: bigIntToNumber(lt.targetLeverage, 18),
+    }));
   } catch (error) {
     if (error instanceof Error) {
       throw error;

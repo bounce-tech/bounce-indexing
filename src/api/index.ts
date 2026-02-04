@@ -15,6 +15,7 @@ import getReferrers from "./endpoints/get-referrers";
 import getAllLeveragedTokens from "./endpoints/get-all-leveraged-tokens";
 import getLeveragedToken from "./endpoints/get-leveraged-token";
 import { validatePaginationParams } from "./utils/validate";
+import getPortfolio from "./endpoints/get-portfolio";
 
 const app = new Hono();
 
@@ -36,13 +37,26 @@ app.use(
 // Global BigInt serialization middleware
 app.use("*", bigIntSerializationMiddleware);
 
-// Stats endpoint
+// Stats
 app.get("/stats", async (c) => {
   try {
     const stats = await getStats();
     return c.json(formatSuccess(stats));
   } catch (error) {
     return c.json(formatError("Failed to fetch protocol statistics"), 500);
+  }
+});
+
+// Portfolio
+app.get("/portfolio/:user", async (c) => {
+  try {
+    const user = c.req.param("user");
+    if (!user) return c.json(formatError("Missing user parameter"), 400);
+    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+    const portfolio = await getPortfolio(user);
+    return c.json(formatSuccess(portfolio));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch portfolio"), 500);
   }
 });
 

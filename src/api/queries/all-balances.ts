@@ -6,6 +6,7 @@ import schema from "ponder:schema";
 export interface Balance {
   totalBalance: bigint;
   purchaseCost: bigint;
+  realizedProfit: bigint;
 }
 
 const getAllBalances = async (): Promise<Record<Address, Record<Address, Balance>>> => {
@@ -16,6 +17,7 @@ const getAllBalances = async (): Promise<Record<Address, Record<Address, Balance
         user: schema.balance.user,
         totalBalance: schema.balance.totalBalance,
         purchaseCost: schema.balance.purchaseCost,
+        realizedProfit: schema.balance.realizedProfit,
       })
       .from(schema.balance)
     // From user, to leveraged token, to balance
@@ -25,6 +27,7 @@ const getAllBalances = async (): Promise<Record<Address, Record<Address, Balance
       acc[userAddress][balance.leveragedToken as Address] = {
         totalBalance: balance.totalBalance,
         purchaseCost: balance.purchaseCost,
+        realizedProfit: balance.realizedProfit,
       };
       return acc;
     }, {} as Record<Address, Record<Address, Balance>>);

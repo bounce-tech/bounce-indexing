@@ -3,6 +3,7 @@ import schema from "ponder:schema";
 import { eq } from "drizzle-orm";
 import { Address } from "viem";
 import { LeveragedTokenSummary, leveragedTokenSelect } from "./get-all-leveraged-tokens";
+import bigIntToNumber from "../utils/big-int-to-number";
 
 const getLeveragedToken = async (
   leveragedTokenAddress: Address
@@ -14,7 +15,12 @@ const getLeveragedToken = async (
       .where(eq(schema.leveragedToken.address, leveragedTokenAddress))
       .limit(1);
 
-    return result[0] ?? null;
+    const lt = result[0];
+    if (!lt) return null;
+    return {
+      ...lt,
+      targetLeverage: bigIntToNumber(lt.targetLeverage, 18),
+    };
   } catch (error) {
     throw new Error("Failed to fetch leveraged token");
   }
