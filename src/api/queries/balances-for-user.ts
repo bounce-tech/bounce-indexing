@@ -6,7 +6,9 @@ import { eq } from "drizzle-orm";
 
 export interface Balance {
   leveragedToken: Address;
-  balance: bigint;
+  totalBalance: bigint;
+  purchaseCost: bigint;
+  realizedProfit: bigint;
 }
 
 const getBalancesForUser = async (user: Address): Promise<Balance[]> => {
@@ -14,7 +16,9 @@ const getBalancesForUser = async (user: Address): Promise<Balance[]> => {
     const balancesData = await db
       .select({
         leveragedToken: schema.balance.leveragedToken,
-        balance: schema.balance.total,
+        totalBalance: schema.balance.totalBalance,
+        purchaseCost: schema.balance.purchaseCost,
+        realizedProfit: schema.balance.realizedProfit,
       })
       .from(schema.balance)
       .where(
@@ -22,7 +26,9 @@ const getBalancesForUser = async (user: Address): Promise<Balance[]> => {
       );
     return balancesData.map((balance) => ({
       leveragedToken: balance.leveragedToken as Address,
-      balance: balance.balance,
+      totalBalance: balance.totalBalance,
+      purchaseCost: balance.purchaseCost,
+      realizedProfit: balance.realizedProfit,
     }));
   } catch (error) {
     throw new Error("Failed to fetch balances for user");

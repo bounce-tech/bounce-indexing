@@ -1,9 +1,5 @@
 import { Address } from "viem";
-import getTradesForUser from "../queries/trades-for-user";
-import getTransfersForUser from "../queries/transfers-for-user";
-import convertToActions from "../utils/convert-to-actions";
 import { convertDecimals, mul } from "../utils/scaled-number";
-import getCostAndRealized from "../utils/get-cost-and-realized";
 import bigIntToNumber from "../utils/big-int-to-number";
 import getBalancesForUser from "../queries/balances-for-user";
 import getExchangeRates from "../queries/exchange-rates";
@@ -22,30 +18,24 @@ interface UserPnl {
 
 const getPnlForUser = async (user: Address) => {
   try {
-    const [trades, transfers, balances, exchangeRates] = await Promise.all([
-      getTradesForUser(user),
-      getTransfersForUser(user),
+    const [balances, exchangeRates] = await Promise.all([
       getBalancesForUser(user),
       getExchangeRates(),
     ]);
-    const tradeLts = trades.map((trade) => trade.leveragedToken);
-    const transferLts = transfers.map((transfer) => transfer.leveragedToken);
-    const uniqueLts = [...new Set([...tradeLts, ...transferLts])];
+    const balanceLts = balances.map((b) => b.leveragedToken);
+    const uniqueLts = [...new Set(balanceLts)];
     const leveragedTokens: Record<Address, LeveragedTokenPnl> = {};
     let totalRealized = 0;
     let totalUnrealized = 0;
     for (const lt of uniqueLts) {
-      const ltBalance = balances.find((b) => b.leveragedToken === lt)?.balance ?? 0n;
+      const balance = balances.find((b) => b.leveragedToken === lt);
+      if (!balance) throw new Error(`Balance for leveraged token ${lt} not found`);
       const exchangeRate = exchangeRates.find((e) => e.leveragedToken === lt)?.exchangeRate;
       if (!exchangeRate) throw new Error(`Exchange rate for leveraged token ${lt} not found`);
-      const ltTrades = trades.filter((t) => t.leveragedToken === lt);
-      const ltTransfers = transfers.filter((t) => t.leveragedToken === lt);
-      const actions = convertToActions(ltTrades, ltTransfers);
-      const { cost, realized } = getCostAndRealized(actions);
-      const realizedNumber = bigIntToNumber(realized, 6);
-      const costNumber = bigIntToNumber(cost, 6);
-      const costScaled = convertDecimals(cost, 6, 18);
-      const currentValue = mul(ltBalance, exchangeRate);
+      const realizedNumber = bigIntToNumber(balance.realizedProfit, 6);
+      const costNumber = bigIntToNumber(balance.purchaseCost, 6);
+      const costScaled = convertDecimals(balance.purchaseCost, 6, 18);
+      const currentValue = mul(balance.totalBalance, exchangeRate);
       const unrealized = bigIntToNumber(currentValue - costScaled, 18);
       const unrealizedPercent = costNumber === 0 ? 0 : unrealized / costNumber;
       leveragedTokens[lt] = {
