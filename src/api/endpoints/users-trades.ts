@@ -16,6 +16,8 @@ export interface UserTrade {
   targetLeverage: bigint;
   isLong: boolean;
   asset: string;
+  profitAmount: bigint | null;
+  profitPercent: bigint | null;
 }
 
 const getUsersTrades = async (
@@ -61,6 +63,8 @@ const getUsersTrades = async (
         targetLeverage: schema.leveragedToken.targetLeverage,
         isLong: schema.leveragedToken.isLong,
         asset: schema.leveragedToken.asset,
+        profitAmount: schema.trade.profitAmount,
+        profitPercent: schema.trade.profitPercent,
       })
       .from(schema.trade)
       .innerJoin(

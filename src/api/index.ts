@@ -12,7 +12,6 @@ import getTotalRebatesForUser from "./endpoints/total-rebates-for-user";
 import getTotalReferralsForUser from "./endpoints/total-referrals-for-user";
 import getLatestTrades from "./endpoints/latest-trades";
 import getAllUsers from "./endpoints/get-all-users";
-import getUser from "./endpoints/get-user";
 import getReferrers from "./endpoints/get-referrers";
 import getAllLeveragedTokens from "./endpoints/get-all-leveraged-tokens";
 import getLeveragedToken from "./endpoints/get-leveraged-token";
@@ -48,20 +47,7 @@ app.get("/stats", async (c) => {
   }
 });
 
-// User traded LTs endpoint
-app.get("/traded-lts", async (c) => {
-  try {
-    const user = c.req.query("user");
-    if (!user) return c.json(formatError("Missing user parameter"), 400);
-    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const tradedLts = await getTradedLtsForUser(user);
-    return c.json(formatSuccess(tradedLts));
-  } catch (error) {
-    return c.json(formatError("Failed to fetch traded leveraged tokens"), 500);
-  }
-});
-
-// User's trades (new endpoint)
+// User's trades
 app.get("/user-trades", async (c) => {
   try {
     const user = c.req.query("user");
@@ -106,19 +92,6 @@ app.get("/users-trades", async (c) => {
   }
 });
 
-// User PnL endpoint
-app.get("/user-pnl", async (c) => {
-  try {
-    const user = c.req.query("user");
-    if (!user) return c.json(formatError("Missing user parameter"), 400);
-    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const pnl = await getPnlForUser(user);
-    return c.json(formatSuccess(pnl));
-  } catch (error) {
-    return c.json(formatError("Failed to fetch profit and loss data"), 500);
-  }
-});
-
 // User total rebates
 app.get("/total-rebates", async (c) => {
   try {
@@ -158,30 +131,10 @@ app.get("/latest-trades", async (c) => {
 // All users endpoint
 app.get("/users", async (c) => {
   try {
-    const after = c.req.query("after");
-    const before = c.req.query("before");
-    const limit = c.req.query("limit");
-    const validationError = validatePaginationParams(after, before, limit);
-    if (validationError) return c.json(formatError(validationError), 400);
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const users = await getAllUsers(after, before, parsedLimit ?? 100);
+    const users = await getAllUsers();
     return c.json(formatSuccess(users));
   } catch (error) {
     return c.json(formatError("Failed to fetch all users"), 500);
-  }
-});
-
-// Single user endpoint
-app.get("/user", async (c) => {
-  try {
-    const user = c.req.query("user");
-    if (!user) return c.json(formatError("Missing user parameter"), 400);
-    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const userData = await getUser(user);
-    if (!userData) return c.json(formatError("User not found"), 404);
-    return c.json(formatSuccess(userData));
-  } catch (error) {
-    return c.json(formatError("Failed to fetch user"), 500);
   }
 });
 
@@ -216,6 +169,19 @@ app.get("/leveraged-tokens/:leveragedTokenAddress", async (c) => {
     return c.json(formatSuccess(leveragedToken));
   } catch (error) {
     return c.json(formatError("Failed to fetch leveraged token"), 500);
+  }
+});
+
+// User PnL endpoint (deprecated, will remove in the future)
+app.get("/user-pnl", async (c) => {
+  try {
+    const user = c.req.query("user");
+    if (!user) return c.json(formatError("Missing user parameter"), 400);
+    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+    const pnl = await getPnlForUser(user);
+    return c.json(formatSuccess(pnl));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch profit and loss data"), 500);
   }
 });
 

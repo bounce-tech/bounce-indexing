@@ -3,12 +3,8 @@ import { db } from "ponder:api";
 import schema from "ponder:schema";
 
 
-export interface ExchangeRate {
-  leveragedToken: Address;
-  exchangeRate: bigint;
-}
 
-const getExchangeRates = async (): Promise<ExchangeRate[]> => {
+const getExchangeRates = async (): Promise<Record<Address, bigint>> => {
   try {
     const exchangeRateData = await db
       .select({
@@ -16,10 +12,10 @@ const getExchangeRates = async (): Promise<ExchangeRate[]> => {
         exchangeRate: schema.leveragedToken.exchangeRate,
       })
       .from(schema.leveragedToken);
-    return exchangeRateData.map((exchangeRate) => ({
-      leveragedToken: exchangeRate.leveragedToken as Address,
-      exchangeRate: exchangeRate.exchangeRate,
-    }));
+    return exchangeRateData.reduce((acc, exchangeRate) => {
+      acc[exchangeRate.leveragedToken as Address] = exchangeRate.exchangeRate;
+      return acc;
+    }, {} as Record<Address, bigint>);
   } catch (error) {
     throw new Error("Failed to fetch exchange rates");
   }
