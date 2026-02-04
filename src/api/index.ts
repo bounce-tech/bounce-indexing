@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { Address, isAddress } from "viem";
-import getTradedLtsForUser from "./endpoints/traded-lts-for-user";
 import getStats from "./endpoints/stats";
 import formatError from "./utils/format-error";
 import formatSuccess from "./utils/format-success";
