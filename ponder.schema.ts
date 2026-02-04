@@ -55,6 +55,7 @@ export const user = onchainTable("user", (t) => ({
   redeemVolumeNotional: t.bigint().notNull().default(0n),
   totalVolumeNotional: t.bigint().notNull().default(0n),
   lastTradeTimestamp: t.bigint().notNull().default(0n),
+  realizedProfit: t.bigint().notNull().default(0n),
 }));
 
 export const fee = onchainTable("fee", (t) => ({

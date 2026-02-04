@@ -105,6 +105,7 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
       redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
       totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
       lastTradeTimestamp: event.block.timestamp,
+      realizedProfit: row.realizedProfit + profit,
     }));
 });
 
@@ -179,6 +180,7 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
       redeemVolumeNotional: row.redeemVolumeNotional + notionalVolume,
       totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
       lastTradeTimestamp: event.block.timestamp,
+      realizedProfit: row.realizedProfit + profit,
     }));
 });
 
