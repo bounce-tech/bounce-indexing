@@ -5,6 +5,7 @@ export const mul = (a: bigint, b: bigint) => {
 };
 
 export const div = (a: bigint, b: bigint) => {
+  if (b === 0n) throw new Error("Division by zero: divisor cannot be zero");
   return (a * SCALE) / b;
 };
 
