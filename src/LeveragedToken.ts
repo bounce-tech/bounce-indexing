@@ -7,10 +7,12 @@ import { getTargetLeverage } from "./utils/get-target-leverage";
 import { ensureBalance } from "./utils/ensure-balance";
 import { FACTORY_ADDRESS } from "@bouncetech/contracts";
 import addressMatch from "./utils/address-match";
+import { div, mul } from "./api/utils/scaled-number";
 
 // event Mint(address indexed minter, address indexed to, uint256 baseAmount, uint256 ltAmount);
 ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
   const { minter, to, baseAmount, ltAmount } = event.args;
+  const leveragedToken = event.log.address;
 
   // Solving an issue where the factory mints some tokens before emitting the CreateLeveragedToken event
   if (addressMatch(minter, FACTORY_ADDRESS)) return;
@@ -19,7 +21,7 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
     id: crypto.randomUUID(),
     isBuy: true,
     timestamp: event.block.timestamp,
-    leveragedToken: event.log.address,
+    leveragedToken,
     sender: minter,
     recipient: to,
     baseAssetAmount: baseAmount,
@@ -31,7 +33,7 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
   await ensureUser(context.db, to);
   const targetLeverage = await getTargetLeverage(
     context.db,
-    event.log.address
+    leveragedToken
   );
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await context.db
@@ -44,21 +46,46 @@ ponder.on("LeveragedToken:Mint", async ({ event, context }) => {
       totalVolumeNotional: row.totalVolumeNotional + notionalVolume,
       lastTradeTimestamp: event.block.timestamp,
     }));
+  await ensureBalance(context.db, to, leveragedToken);
+  await context.db.update(schema.balance, { user: to, leveragedToken }).set((row) => ({
+    purchaseCost: row.purchaseCost + baseAmount,
+  }));
 });
 
 // event Redeem(address indexed sender, address indexed to, uint256 ltAmount, uint256 baseAmount);
 ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
   const { sender, to, ltAmount, baseAmount } = event.args;
+  if (ltAmount === 0n || baseAmount === 0n) return;
+  const leveragedToken = event.log.address;
 
+  // Update balance
+  await ensureBalance(context.db, to, leveragedToken);
+  const balance = await context.db.find(schema.balance, { user: to, leveragedToken });
+  if (!balance) throw new Error("Balance not found");
+  const balanceBeforeRedeem = balance.totalBalance + ltAmount;
+  const purchasePrice = div(balance.purchaseCost, balanceBeforeRedeem);
+  const currentPrice = div(baseAmount, ltAmount);
+  const priceDifference = currentPrice - purchasePrice;
+  const profit = mul(priceDifference, ltAmount);
+  await context.db.update(schema.balance, { user: to, leveragedToken }).set((row) => {
+    return ({
+      realizedProfit: row.realizedProfit + profit,
+      purchaseCost: mul(balance.totalBalance, purchasePrice),
+    })
+  });
+
+  // Insert trade
   await context.db.insert(schema.trade).values({
     id: crypto.randomUUID(),
     isBuy: false,
     timestamp: event.block.timestamp,
-    leveragedToken: event.log.address,
+    leveragedToken,
     sender: sender,
     recipient: to,
     baseAssetAmount: baseAmount,
     leveragedTokenAmount: ltAmount,
+    profitAmount: profit,
+    profitPercent: purchasePrice === 0n ? 0n : div(priceDifference, purchasePrice),
     txHash: event.transaction?.hash ?? "",
   });
 
@@ -66,7 +93,7 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
   await ensureUser(context.db, to);
   const targetLeverage = await getTargetLeverage(
     context.db,
-    event.log.address
+    leveragedToken
   );
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await context.db
@@ -88,15 +115,35 @@ ponder.on("LeveragedToken:PrepareRedeem", async ({ event, context }) => {
   await ensureUser(context.db, sender);
   await ensureBalance(context.db, sender, event.log.address);
   await context.db.update(schema.balance, { user: sender, leveragedToken: event.log.address }).set((row) => ({
-    credit: row.credit + ltAmount,
-    total: row.total + ltAmount,
+    creditBalance: row.creditBalance + ltAmount,
+    totalBalance: row.totalBalance + ltAmount,
   }));
 });
 
 // event ExecuteRedeem(address indexed user, uint256 ltAmount, uint256 baseAmount);
 ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
   const { user, ltAmount, baseAmount } = event.args;
+  if (ltAmount === 0n || baseAmount === 0n) return;
+  const leveragedToken = event.log.address;
 
+  // Update balance
+  await ensureBalance(context.db, user, leveragedToken);
+  const balance = await context.db.find(schema.balance, { user, leveragedToken });
+  if (!balance) throw new Error("Balance not found");
+  const balanceBeforeRedeem = balance.totalBalance;
+  const balanceAfterRedeem = balanceBeforeRedeem - ltAmount;
+  const purchasePrice = div(balance.purchaseCost, balanceBeforeRedeem);
+  const currentPrice = div(baseAmount, ltAmount);
+  const priceDifference = currentPrice - purchasePrice;
+  const profit = mul(priceDifference, ltAmount);
+  await context.db.update(schema.balance, { user, leveragedToken }).set((row) => {
+    return ({
+      realizedProfit: row.realizedProfit + profit,
+      purchaseCost: mul(balanceAfterRedeem, purchasePrice),
+    })
+  });
+
+  // Insert trade
   await context.db.insert(schema.trade).values({
     id: crypto.randomUUID(),
     isBuy: false,
@@ -106,6 +153,8 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
     recipient: user,
     baseAssetAmount: baseAmount,
     leveragedTokenAmount: ltAmount,
+    profitAmount: profit,
+    profitPercent: purchasePrice === 0n ? 0n : div(priceDifference, purchasePrice),
     txHash: event.transaction?.hash ?? "",
   });
 
@@ -118,8 +167,8 @@ ponder.on("LeveragedToken:ExecuteRedeem", async ({ event, context }) => {
   const notionalVolume = (baseAmount * targetLeverage) / BigInt(1e18);
   await ensureBalance(context.db, user, event.log.address);
   await context.db.update(schema.balance, { user: user, leveragedToken: event.log.address }).set((row) => ({
-    credit: row.credit - ltAmount,
-    total: row.total - ltAmount,
+    creditBalance: row.creditBalance - ltAmount,
+    totalBalance: row.totalBalance - ltAmount,
   }));
   await context.db
     .update(schema.user, { address: user })
@@ -139,14 +188,15 @@ ponder.on("LeveragedToken:CancelRedeem", async ({ event, context }) => {
   await ensureUser(context.db, user);
   await ensureBalance(context.db, user, event.log.address);
   await context.db.update(schema.balance, { user: user, leveragedToken: event.log.address }).set((row) => ({
-    credit: row.credit - credit,
-    total: row.total - credit,
+    creditBalance: row.creditBalance - credit,
+    totalBalance: row.totalBalance - credit,
   }));
 });
 
 // event Transfer(address indexed from, address indexed to, uint256 value);
 ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
+  if (value === 0n || from === to) return;
   const leveragedToken = event.log.address;
 
   await context.db.insert(schema.transfer).values({
@@ -168,8 +218,8 @@ ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
         leveragedToken,
       })
       .set((row) => ({
-        liquid: row.liquid - value,
-        total: row.total - value,
+        liquidBalance: row.liquidBalance - value,
+        totalBalance: row.totalBalance - value,
       }));
   }
 
@@ -182,8 +232,8 @@ ponder.on("LeveragedToken:Transfer", async ({ event, context }) => {
         leveragedToken,
       })
       .set((row) => ({
-        liquid: row.liquid + value,
-        total: row.total + value,
+        liquidBalance: row.liquidBalance + value,
+        totalBalance: row.totalBalance + value,
       }));
   }
 });
