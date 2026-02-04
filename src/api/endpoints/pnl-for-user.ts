@@ -2,10 +2,11 @@ import { Address } from "viem";
 import getTradesForUser from "../queries/trades-for-user";
 import getTransfersForUser from "../queries/transfers-for-user";
 import convertToActions from "../utils/convert-to-actions";
-import getLeveragedTokenData from "../utils/leveraged-token-data";
 import { convertDecimals, mul } from "../utils/scaled-number";
 import getCostAndRealized from "../utils/get-cost-and-realized";
 import bigIntToNumber from "../utils/big-int-to-number";
+import getBalancesForUser from "../queries/balances-for-user";
+import getExchangeRates from "../queries/exchange-rates";
 
 interface LeveragedTokenPnl {
   realized: number;
@@ -21,10 +22,11 @@ interface UserPnl {
 
 const getPnlForUser = async (user: Address) => {
   try {
-    const [trades, transfers, leveragedTokenData] = await Promise.all([
+    const [trades, transfers, balances, exchangeRates] = await Promise.all([
       getTradesForUser(user),
       getTransfersForUser(user),
-      getLeveragedTokenData(user),
+      getBalancesForUser(user),
+      getExchangeRates(),
     ]);
     const tradeLts = trades.map((trade) => trade.leveragedToken);
     const transferLts = transfers.map((transfer) => transfer.leveragedToken);
@@ -33,13 +35,9 @@ const getPnlForUser = async (user: Address) => {
     let totalRealized = 0;
     let totalUnrealized = 0;
     for (const lt of uniqueLts) {
-      const data = leveragedTokenData.find(
-        (l) => l.leveragedToken.toLowerCase() === lt
-      );
-      if (!data) {
-        console.error(`Leveraged token ${lt} not found in leveraged token data`);
-        continue;
-      }
+      const ltBalance = balances.find((b) => b.leveragedToken === lt)?.balance ?? 0n;
+      const exchangeRate = exchangeRates.find((e) => e.leveragedToken === lt)?.exchangeRate;
+      if (!exchangeRate) throw new Error(`Exchange rate for leveraged token ${lt} not found`);
       const ltTrades = trades.filter((t) => t.leveragedToken === lt);
       const ltTransfers = transfers.filter((t) => t.leveragedToken === lt);
       const actions = convertToActions(ltTrades, ltTransfers);
@@ -47,8 +45,6 @@ const getPnlForUser = async (user: Address) => {
       const realizedNumber = bigIntToNumber(realized, 6);
       const costNumber = bigIntToNumber(cost, 6);
       const costScaled = convertDecimals(cost, 6, 18);
-      const ltBalance = data.balanceOf + data.userCredit;
-      const exchangeRate = data.exchangeRate;
       const currentValue = mul(ltBalance, exchangeRate);
       const unrealized = bigIntToNumber(currentValue - costScaled, 18);
       const unrealizedPercent = costNumber === 0 ? 0 : unrealized / costNumber;
