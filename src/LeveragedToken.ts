@@ -63,6 +63,7 @@ ponder.on("LeveragedToken:Redeem", async ({ event, context }) => {
   const balance = await context.db.find(schema.balance, { user: to, leveragedToken });
   if (!balance) throw new Error("Balance not found");
   const balanceBeforeRedeem = balance.totalBalance + ltAmount;
+  if (balanceBeforeRedeem === 0n) throw new Error("Balance before redeem is 0");
   const purchasePrice = div(balance.purchaseCost, balanceBeforeRedeem);
   const currentPrice = div(baseAmount, ltAmount);
   const priceDifference = currentPrice - purchasePrice;
