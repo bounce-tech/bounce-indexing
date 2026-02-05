@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { Address, isAddress } from "viem";
-import getTradedLtsForUser from "./endpoints/traded-lts-for-user";
 import getStats from "./endpoints/stats";
 import formatError from "./utils/format-error";
 import formatSuccess from "./utils/format-success";
@@ -12,9 +11,11 @@ import getTotalRebatesForUser from "./endpoints/total-rebates-for-user";
 import getTotalReferralsForUser from "./endpoints/total-referrals-for-user";
 import getLatestTrades from "./endpoints/latest-trades";
 import getAllUsers from "./endpoints/get-all-users";
-import getUser from "./endpoints/get-user";
 import getReferrers from "./endpoints/get-referrers";
+import getAllLeveragedTokens from "./endpoints/get-all-leveraged-tokens";
+import getLeveragedToken from "./endpoints/get-leveraged-token";
 import { validatePaginationParams } from "./utils/validate";
+import getPortfolio from "./endpoints/get-portfolio";
 
 const app = new Hono();
 
@@ -36,7 +37,7 @@ app.use(
 // Global BigInt serialization middleware
 app.use("*", bigIntSerializationMiddleware);
 
-// Stats endpoint
+// Stats
 app.get("/stats", async (c) => {
   try {
     const stats = await getStats();
@@ -46,20 +47,20 @@ app.get("/stats", async (c) => {
   }
 });
 
-// User traded LTs endpoint
-app.get("/traded-lts", async (c) => {
+// Portfolio
+app.get("/portfolio/:user", async (c) => {
   try {
-    const user = c.req.query("user");
+    const user = c.req.param("user");
     if (!user) return c.json(formatError("Missing user parameter"), 400);
     if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const tradedLts = await getTradedLtsForUser(user);
-    return c.json(formatSuccess(tradedLts));
+    const portfolio = await getPortfolio(user);
+    return c.json(formatSuccess(portfolio));
   } catch (error) {
-    return c.json(formatError("Failed to fetch traded leveraged tokens"), 500);
+    return c.json(formatError("Failed to fetch portfolio"), 500);
   }
 });
 
-// User's trades (new endpoint)
+// User's trades
 app.get("/user-trades", async (c) => {
   try {
     const user = c.req.query("user");
@@ -85,19 +86,6 @@ app.get("/user-trades", async (c) => {
     return c.json(formatSuccess(trades));
   } catch (error) {
     return c.json(formatError("Failed to fetch user trades"), 500);
-  }
-});
-
-// User PnL endpoint
-app.get("/user-pnl", async (c) => {
-  try {
-    const user = c.req.query("user");
-    if (!user) return c.json(formatError("Missing user parameter"), 400);
-    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const pnl = await getPnlForUser(user);
-    return c.json(formatSuccess(pnl));
-  } catch (error) {
-    return c.json(formatError("Failed to fetch profit and loss data"), 500);
   }
 });
 
@@ -140,30 +128,10 @@ app.get("/latest-trades", async (c) => {
 // All users endpoint
 app.get("/users", async (c) => {
   try {
-    const after = c.req.query("after");
-    const before = c.req.query("before");
-    const limit = c.req.query("limit");
-    const validationError = validatePaginationParams(after, before, limit);
-    if (validationError) return c.json(formatError(validationError), 400);
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const users = await getAllUsers(after, before, parsedLimit ?? 100);
+    const users = await getAllUsers();
     return c.json(formatSuccess(users));
   } catch (error) {
     return c.json(formatError("Failed to fetch all users"), 500);
-  }
-});
-
-// Single user endpoint
-app.get("/user", async (c) => {
-  try {
-    const user = c.req.query("user");
-    if (!user) return c.json(formatError("Missing user parameter"), 400);
-    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
-    const userData = await getUser(user);
-    if (!userData) return c.json(formatError("User not found"), 404);
-    return c.json(formatSuccess(userData));
-  } catch (error) {
-    return c.json(formatError("Failed to fetch user"), 500);
   }
 });
 
@@ -174,6 +142,43 @@ app.get("/referrers", async (c) => {
     return c.json(formatSuccess(referrers));
   } catch (error) {
     return c.json(formatError("Failed to fetch referrers"), 500);
+  }
+});
+
+// All leveraged tokens endpoint
+app.get("/leveraged-tokens", async (c) => {
+  try {
+    const leveragedTokens = await getAllLeveragedTokens();
+    return c.json(formatSuccess(leveragedTokens));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch leveraged tokens"), 500);
+  }
+});
+
+// Single leveraged token endpoint
+app.get("/leveraged-tokens/:leveragedTokenAddress", async (c) => {
+  try {
+    const leveragedTokenAddress = c.req.param("leveragedTokenAddress");
+    if (!leveragedTokenAddress) return c.json(formatError("Missing leveraged token address parameter"), 400);
+    if (!isAddress(leveragedTokenAddress)) return c.json(formatError("Invalid leveraged token address"), 400);
+    const leveragedToken = await getLeveragedToken(leveragedTokenAddress as Address);
+    if (!leveragedToken) return c.json(formatError("Leveraged token not found"), 404);
+    return c.json(formatSuccess(leveragedToken));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch leveraged token"), 500);
+  }
+});
+
+// User PnL endpoint (deprecated, will remove in the future)
+app.get("/user-pnl", async (c) => {
+  try {
+    const user = c.req.query("user");
+    if (!user) return c.json(formatError("Missing user parameter"), 400);
+    if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
+    const pnl = await getPnlForUser(user);
+    return c.json(formatSuccess(pnl));
+  } catch (error) {
+    return c.json(formatError("Failed to fetch profit and loss data"), 500);
   }
 });
 

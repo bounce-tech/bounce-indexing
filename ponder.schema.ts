@@ -22,6 +22,8 @@ export const trade = onchainTable("trade", (t) => ({
   recipient: t.hex().notNull(),
   baseAssetAmount: t.bigint().notNull(),
   leveragedTokenAmount: t.bigint().notNull(),
+  profitAmount: t.bigint(),
+  profitPercent: t.bigint(),
   txHash: t.hex().notNull(),
 }));
 
@@ -53,6 +55,7 @@ export const user = onchainTable("user", (t) => ({
   redeemVolumeNotional: t.bigint().notNull().default(0n),
   totalVolumeNotional: t.bigint().notNull().default(0n),
   lastTradeTimestamp: t.bigint().notNull().default(0n),
+  realizedProfit: t.bigint().notNull().default(0n),
 }));
 
 export const fee = onchainTable("fee", (t) => ({
@@ -68,7 +71,11 @@ export const balance = onchainTable(
   (t) => ({
     user: t.hex().notNull(),
     leveragedToken: t.hex().notNull(),
-    amount: t.bigint().notNull().default(0n),
+    liquidBalance: t.bigint().notNull().default(0n),
+    creditBalance: t.bigint().notNull().default(0n),
+    totalBalance: t.bigint().notNull().default(0n),
+    purchaseCost: t.bigint().notNull().default(0n),
+    realizedProfit: t.bigint().notNull().default(0n),
   }),
   (table) => ({
     pk: primaryKey({ columns: [table.user, table.leveragedToken] }),

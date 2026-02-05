@@ -4,6 +4,7 @@ import { Address } from "viem";
 import schema from "ponder:schema";
 import { PaginatedResponse } from "../utils/cursor-pagination";
 import { applyCursorFilter, calculatePageInfo } from "../utils/pagination-helpers";
+import bigIntToNumber from "../utils/big-int-to-number";
 
 export interface UserTrade {
   id: string;
@@ -13,9 +14,11 @@ export interface UserTrade {
   baseAssetAmount: bigint;
   leveragedTokenAmount: bigint;
   leveragedToken: Address;
-  targetLeverage: bigint;
+  targetLeverage: number;
   isLong: boolean;
   asset: string;
+  profitAmount: number | null;
+  profitPercent: number | null;
 }
 
 const getUsersTrades = async (
@@ -61,6 +64,8 @@ const getUsersTrades = async (
         targetLeverage: schema.leveragedToken.targetLeverage,
         isLong: schema.leveragedToken.isLong,
         asset: schema.leveragedToken.asset,
+        profitAmount: schema.trade.profitAmount,
+        profitPercent: schema.trade.profitPercent,
       })
       .from(schema.trade)
       .innerJoin(
@@ -95,7 +100,12 @@ const getUsersTrades = async (
     const totalCount = Number(countResult[0]?.count || 0);
 
     return {
-      items,
+      items: items.map((item) => ({
+        ...item,
+        targetLeverage: bigIntToNumber(item.targetLeverage, 18),
+        profitAmount: item.profitAmount ? bigIntToNumber(item.profitAmount, 6) : null,
+        profitPercent: item.profitPercent ? bigIntToNumber(item.profitPercent, 18) : null,
+      })),
       pageInfo,
       totalCount,
     };

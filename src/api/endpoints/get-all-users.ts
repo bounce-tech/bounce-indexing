@@ -1,37 +1,28 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
-import { gt, desc, sql } from "drizzle-orm";
-import { PaginatedResponse } from "../utils/cursor-pagination";
-import { applyCursorFilter, calculatePageInfo } from "../utils/pagination-helpers";
+import { gt, sql, eq } from "drizzle-orm";
+import bigIntToNumber from "../utils/big-int-to-number";
+
+const BASE_ASSET_DECIMALS = BigInt(1e6);
+const LEVERAGE_DECIMALS = BigInt(1e18);
 
 export interface UserSummary {
   address: string;
   tradeCount: number;
-  mintVolumeNominal: bigint;
-  redeemVolumeNominal: bigint;
-  totalVolumeNominal: bigint;
-  mintVolumeNotional: bigint;
-  redeemVolumeNotional: bigint;
-  totalVolumeNotional: bigint;
-  lastTradeTimestamp: bigint;
+  mintVolumeNominal: number;
+  redeemVolumeNominal: number;
+  totalVolumeNominal: number;
+  mintVolumeNotional: number;
+  redeemVolumeNotional: number;
+  totalVolumeNotional: number;
+  lastTradeTimestamp: number;
+  realizedProfit: number;
+  unrealizedProfit: number;
+  totalProfit: number;
 }
 
-const getAllUsers = async (
-  after?: string,
-  before?: string,
-  limit: number = 100
-): Promise<PaginatedResponse<UserSummary>> => {
+const getAllUsers = async (): Promise<UserSummary[]> => {
   try {
-    const baseWhere = gt(schema.user.tradeCount, 0);
-    const where = applyCursorFilter(
-      baseWhere,
-      after,
-      before,
-      schema.user.lastTradeTimestamp,
-      schema.user.address
-    );
-
-    // Query with limit + 1 to check if there's a next page
     const users = await db
       .select({
         address: schema.user.address,
@@ -43,35 +34,39 @@ const getAllUsers = async (
         redeemVolumeNotional: schema.user.redeemVolumeNotional,
         totalVolumeNotional: schema.user.totalVolumeNotional,
         lastTradeTimestamp: schema.user.lastTradeTimestamp,
+        realizedProfit: schema.user.realizedProfit,
+        unrealizedProfit: sql<bigint>`SUM((${schema.balance.totalBalance} * ${schema.leveragedToken.exchangeRate}) / ${BASE_ASSET_DECIMALS} - ${schema.balance.purchaseCost} * (${LEVERAGE_DECIMALS - BASE_ASSET_DECIMALS}))`
       })
       .from(schema.user)
-      .where(where)
-      .orderBy(desc(schema.user.lastTradeTimestamp), schema.user.address)
-      .limit(limit + 1);
+      .leftJoin(
+        schema.balance,
+        eq(schema.user.address, schema.balance.user)
+      )
+      .leftJoin(
+        schema.leveragedToken,
+        eq(schema.balance.leveragedToken, schema.leveragedToken.address)
+      )
+      .where(gt(schema.user.tradeCount, 0))
+      .groupBy(schema.user.address);
 
-    const hasMore = users.length > limit;
-    const items = hasMore ? users.slice(0, limit) : users;
-    const pageInfo = calculatePageInfo(
-      items,
-      hasMore,
-      after,
-      before,
-      (item) => item.lastTradeTimestamp,
-      (item) => item.address
-    );
+    const items = users.map((user) => {
+      return {
+        address: user.address,
+        tradeCount: user.tradeCount,
+        mintVolumeNominal: bigIntToNumber(user.mintVolumeNominal, 6),
+        redeemVolumeNominal: bigIntToNumber(user.redeemVolumeNominal, 6),
+        totalVolumeNominal: bigIntToNumber(user.totalVolumeNominal, 6),
+        mintVolumeNotional: bigIntToNumber(user.mintVolumeNotional, 6),
+        redeemVolumeNotional: bigIntToNumber(user.redeemVolumeNotional, 6),
+        totalVolumeNotional: bigIntToNumber(user.totalVolumeNotional, 6),
+        lastTradeTimestamp: bigIntToNumber(user.lastTradeTimestamp, 0),
+        realizedProfit: bigIntToNumber(user.realizedProfit, 6),
+        unrealizedProfit: Number(user.unrealizedProfit || 0),
+        totalProfit: bigIntToNumber(user.realizedProfit, 6) + Number(user.unrealizedProfit || 0),
+      };
+    });
 
-    // Get total count (always included)
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(schema.user)
-      .where(baseWhere);
-    const totalCount = Number(countResult[0]?.count || 0);
-
-    return {
-      items,
-      pageInfo,
-      totalCount,
-    };
+    return items;
   } catch (error) {
     if (error instanceof Error) {
       throw error;
