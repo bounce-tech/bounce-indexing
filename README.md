@@ -1,178 +1,10 @@
-# Bounce Indexing
+# Bounce Indexing API
 
-A [Ponder](https://ponder.sh) indexing project for tracking [Bounce Tech](https://bounce.tech/) leveraged tokens and trades on HyperEVM.
+A REST API for querying data from the Bounce Tech leveraged token protocol on HyperEVM. This API provides access to leveraged token information, user trades, portfolio data, referral statistics, and protocol-wide metrics.
 
-## Overview
+**Base URL:** `https://indexing.bounce.tech`
 
-This project indexes the **Bounce Tech leveraged token protocol**, a decentralized finance (DeFi) platform that enables leveraged trading through tokenized assets. The indexer tracks leveraged token contracts created by the Bounce Tech factory contract, monitoring:
-
-- **Leveraged Tokens**: Token metadata including address, creator, market ID, leverage settings, and ERC-20 properties (symbol, name, decimals)
-- **Trades**: All mint and redeem operations for leveraged tokens
-- **Transfers**: ERC-20 token transfers for leveraged tokens
-- **Fees**: Fees paid from leveraged tokens (currently sent to treasury, with support for multiple destinations in the future)
-- **Referrals**: User referral registrations and relationships
-- **Rebates**: Rebate claims from the referral system
-
-## Setup
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Set up environment variables in `.env.local`:
-
-Create a `.env.local` file in the root directory with:
-
-```bash
-HYPER_EVM_RPC_URL=your_rpc_url_here
-```
-
-3. Start the development server:
-
-```bash
-npm run dev
-```
-
-The dev server will:
-
-- Connect to the database
-- Start indexing from the configured start block
-- Serve custom REST API endpoints at `http://localhost:42069`:
-  - `/stats` - Protocol statistics
-  - `/traded-lts` - Leveraged tokens traded by a user
-  - `/user-trades` - All trades for a user
-  - `/user-pnl` - Profit and loss for a user
-  - `/latest-trades` - Latest 100 trades across all users
-  - `/users` - All users from the user table
-  - `/user` - Data for a single user
-  - `/referrers` - All users with referral codes (referrers only)
-  - `/leveraged-tokens` - All leveraged tokens
-  - `/leveraged-tokens/:leveragedTokenAddress` - Data for a single leveraged token
-
-## Schema
-
-### `leveragedToken`
-
-Stores metadata for each leveraged token created by the factory.
-
-- `address` (primary key): Token contract address
-- `creator`: Address that created the token
-- `marketId`: Market identifier
-- `targetLeverage`: Target leverage amount
-- `isLong`: Whether the token is a long position
-- `symbol`: ERC-20 symbol
-- `name`: ERC-20 name
-- `decimals`: ERC-20 decimals
-- `asset`: Base asset symbol
-
-### `trade`
-
-Stores all mint and redeem operations.
-
-- `id` (primary key): Unique trade identifier
-- `isBuy`: `true` for mints, `false` for redeems
-- `leveragedToken`: Address of the leveraged token (references `leveragedToken.address`)
-- `timestamp`: Block timestamp
-- `sender`: Address initiating the trade
-- `recipient`: Address receiving the tokens
-- `baseAssetAmount`: Amount of base asset
-- `leveragedTokenAmount`: Amount of leveraged tokens
-- `txHash`: Transaction hash of the trade
-
-### `transfer`
-
-Stores ERC-20 token transfers for leveraged tokens.
-
-- `id` (primary key): Unique transfer identifier
-- `timestamp`: Block timestamp
-- `leveragedToken`: Address of the leveraged token (references `leveragedToken.address`)
-- `sender`: Address sending the tokens
-- `recipient`: Address receiving the tokens
-- `amount`: Amount of tokens transferred
-- `txHash`: Transaction hash of the transfer
-
-### `user`
-
-Stores user information including referral relationships and rebate tracking.
-
-- `address` (primary key): User's Ethereum address
-- `referralCode`: The user's own referral code
-- `referrerCode`: The referral code the user used when joining
-- `referrerAddress`: Address of the user's referrer
-- `referredUserCount`: Number of users referred by this user
-- `totalRebates`: Total rebates earned by the user (as referrer and referee)
-- `referrerRebates`: Rebates earned as a referrer
-- `refereeRebates`: Rebates earned as a referee
-- `claimedRebates`: Rebates that have been claimed
-- `tradeCount`: Total number of trades made by the user
-- `mintVolumeNominal`: Total mint volume in nominal terms
-- `redeemVolumeNominal`: Total redeem volume in nominal terms
-- `totalVolumeNominal`: Total volume in nominal terms
-- `mintVolumeNotional`: Total mint volume in notional terms
-- `redeemVolumeNotional`: Total redeem volume in notional terms
-- `totalVolumeNotional`: Total volume in notional terms
-- `lastTradeTimestamp`: Timestamp of the user's last trade
-
-### `fee`
-
-Stores fees paid from leveraged tokens.
-
-- `id` (primary key): Unique fee identifier
-- `leveragedToken`: Address of the leveraged token (references `leveragedToken.address`)
-- `timestamp`: Block timestamp
-- `amount`: Amount of fee paid
-- `destination`: Destination of the fee (e.g., "treasury")
-
-**Note:** Currently, all fees are sent to the treasury. The system is designed to support multiple fee destinations in the future.
-
-### Relations
-
-- Each `leveragedToken` can have many `trade` records
-- Each `trade` belongs to one `leveragedToken`
-- Each `leveragedToken` can have many `transfer` records
-- Each `transfer` belongs to one `leveragedToken`
-- Each `leveragedToken` can have many `fee` records
-- Each `fee` belongs to one `leveragedToken`
-
-## Indexing
-
-The project indexes events from the Bounce Tech protocol:
-
-1. **Bounce Tech Factory Contract** (address imported from `@bouncetech/contracts` package)
-
-   - `CreateLeveragedToken`: Creates a new leveraged token record and reads token metadata (symbol, name, decimals) from the contract
-
-2. **Bounce Tech LeveragedToken Contracts** (factory pattern, with 24 pre-configured addresses)
-
-   - `Mint`: Records buy trades
-   - `Redeem`: Records sell trades
-   - `ExecuteRedeem`: Records executed redemption trades
-   - `Transfer`: Records ERC-20 token transfers
-   - `SendFeesToTreasury`: Records fees paid from leveraged tokens
-
-3. **Bounce Tech Referrals Contract** (address imported from `@bouncetech/contracts` package)
-   - `AddReferrer`: Records when a user registers their referral code
-   - `JoinWithReferral`: Records when users join with a referral code and links referee to referrer
-   - `ClaimRebate`: Records rebate claims from the referral system
-   - `DonateRebate`: Records rebate distributions to referrers and referees
-
-The indexer uses block-based indexing starting from block `21549398` and processes new blocks in real-time.
-
-## Querying
-
-### API
-
-The API provides custom REST endpoints for querying leveraged token data. All endpoints use GET requests.
-
-**Live Endpoint:** The indexing API is available at `https://indexing.bounce.tech/`. For example:
-- `https://indexing.bounce.tech/stats` - Get protocol statistics
-- `https://indexing.bounce.tech/user-trades?user=0x...` - Get user trades
-
-**Local Development:** When running locally, endpoints are served at `http://localhost:42069`.
-
-### API Usage Terms
+## API Usage Terms
 
 This API is publicly available for use by anyone. However, to ensure fair access and maintain service quality for all users, please observe the following guidelines:
 
@@ -190,24 +22,7 @@ This API is publicly available for use by anyone. However, to ensure fair access
 
 By using this API, you agree to use it in a manner that respects the service and other users. Thank you for your cooperation.
 
-#### Endpoints Summary
-
-| Endpoint          | Method   | Description                            | Required Parameters |
-| ----------------- | -------- | -------------------------------------- | ------------------- |
-| `/stats`          | GET      | Get aggregated protocol statistics     | None                |
-| `/traded-lts`     | GET      | Get leveraged tokens a user has traded | `user`              |
-| `/user-trades`    | GET      | Get all trades for a user              | `user`              |
-| `/user-pnl`       | GET      | Get profit and loss for a user         | `user`              |
-| `/total-rebates`  | GET      | Get total rebates earned by a user     | `user`              |
-| `/total-referrals`| GET      | Get total referrals made by a user     | `user`              |
-| `/latest-trades`  | GET      | Get latest 100 trades across all users | None                |
-| `/users`          | GET      | Get all users from the user table      | None                |
-| `/user`           | GET      | Get data for a single user             | `user`              |
-| `/referrers`      | GET      | Get all users with referral codes      | None                |
-| `/leveraged-tokens` | GET   | Get all leveraged tokens               | None                |
-| `/leveraged-tokens/:leveragedTokenAddress` | GET | Get data for a single leveraged token | `leveragedTokenAddress` (path parameter) |
-
-#### Response Format
+## Response Format
 
 All API endpoints follow a consistent response structure.
 
@@ -237,15 +52,18 @@ All API endpoints follow a consistent response structure.
 
 - All endpoints return JSON responses
 - BigInt values are automatically serialized to strings in responses (e.g., `"1234567890123456789"` instead of a number)
-- Error responses return HTTP status code `400 Bad Request` for invalid or missing parameters
+- Error responses return HTTP status code `400 Bad Request` for invalid or missing parameters, `404 Not Found` for missing resources, and `500 Internal Server Error` for server errors
 - CORS is enabled for specific origins: `http://localhost:5173`, `https://bounce.tech`, and Firebase web apps (`*.web.app`)
 
-#### Stats Endpoint
+## Endpoints
+
+### Stats
 
 Get aggregated protocol statistics.
 
-**Live:** `https://indexing.bounce.tech/stats`  
-**Local:** `http://localhost:42069/stats`
+**Endpoint:** `GET https://indexing.bounce.tech/stats`
+
+**Query Parameters:** None
 
 **Response Data:**
 
@@ -281,22 +99,39 @@ Get aggregated protocol statistics.
 }
 ```
 
-#### Traded LTs Endpoint
+### Portfolio
 
-Get the list of leveraged tokens that a user has traded at `http://localhost:42069/traded-lts`.
+Get portfolio data for a user including balances, unrealized profit, and realized profit across all leveraged tokens.
 
-**Query Parameters:**
+**Endpoint:** `GET https://indexing.bounce.tech/portfolio/:user`
+
+**Path Parameters:**
 
 - `user` (required): Ethereum address of the user
 
 **Response Data:**
 
-- Array of unique leveraged token addresses that the user has received transfers for
+- `unrealizedProfit`: Total unrealized profit across all leveraged tokens (in base asset units)
+- `realizedProfit`: Total realized profit across all leveraged tokens (in base asset units)
+- `leveragedTokens`: Array of leveraged token objects, each containing:
+  - `address`: Leveraged token contract address
+  - `marketId`: Market identifier (integer)
+  - `targetLeverage`: Target leverage amount (number)
+  - `isLong`: Whether the token is a long position (boolean)
+  - `symbol`: ERC-20 symbol (string)
+  - `name`: ERC-20 name (string)
+  - `decimals`: ERC-20 decimals (integer)
+  - `asset`: Base asset symbol (string)
+  - `exchangeRate`: Current exchange rate (as string, serialized from BigInt)
+  - `userBalance`: User's balance of this leveraged token (as string, serialized from BigInt)
+  - `unrealizedProfit`: Unrealized profit for this leveraged token (number)
+  - `unrealizedPercent`: Unrealized profit as a percentage (number, e.g., 0.15 = 15%)
+- `pnlChart`: Array of PnL chart data points (currently empty)
 
 **Example Request:**
 
 ```
-GET http://localhost:42069/traded-lts?user=0x1234567890123456789012345678901234567890
+GET https://indexing.bounce.tech/portfolio/0x1234567890123456789012345678901234567890
 ```
 
 **Example Success Response:**
@@ -304,32 +139,41 @@ GET http://localhost:42069/traded-lts?user=0x12345678901234567890123456789012345
 ```json
 {
   "status": "success",
-  "data": [
-    "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
-    "0x22a7a4a38a97ca44473548036f22a7bcd2c25457",
-    "0x2525f0794a927df477292bee1bc1fd57b8a82614"
-  ],
+  "data": {
+    "unrealizedProfit": 1234.56,
+    "realizedProfit": 567.89,
+    "leveragedTokens": [
+      {
+        "address": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
+        "marketId": 1,
+        "targetLeverage": 3.0,
+        "isLong": true,
+        "symbol": "3L-USDC",
+        "name": "3x Long USDC",
+        "decimals": 18,
+        "asset": "USDC",
+        "exchangeRate": "1050000000000000000",
+        "userBalance": "5000000000000000000",
+        "unrealizedProfit": 200.0,
+        "unrealizedPercent": 0.4
+      }
+    ],
+    "pnlChart": []
+  },
   "error": null
-}
-```
-
-**Example Error Response:**
-
-```json
-{
-  "status": "error",
-  "data": null,
-  "error": "Missing user parameter"
 }
 ```
 
 **Error Responses:**
 
 - `400 Bad Request`: Missing or invalid user address parameter
+- `500 Internal Server Error`: Failed to fetch portfolio
 
-#### User Trades Endpoint
+### User Trades
 
-Get all trades for a specific user at `http://localhost:42069/user-trades`.
+Get all trades for a specific user with optional filtering by asset or leveraged token address.
+
+**Endpoint:** `GET https://indexing.bounce.tech/user-trades`
 
 **Query Parameters:**
 
@@ -361,9 +205,11 @@ Paginated response containing:
   - `baseAssetAmount`: Amount of base asset (as string, serialized from BigInt)
   - `leveragedTokenAmount`: Amount of leveraged tokens (as string, serialized from BigInt)
   - `leveragedToken`: Address of the leveraged token
-  - `targetLeverage`: Target leverage of the leveraged token (as string, serialized from BigInt)
+  - `targetLeverage`: Target leverage of the leveraged token (number)
   - `isLong`: Whether the leveraged token is a long position
   - `asset`: Base asset symbol
+  - `profitAmount`: Profit amount for this trade (number, null if not applicable)
+  - `profitPercent`: Profit percentage for this trade (number, null if not applicable)
 - `pageInfo`: Pagination information object containing:
   - `startCursor`: Cursor for the first item in the current page (use with `before` for previous page)
   - `endCursor`: Cursor for the last item in the current page (use with `after` for next page)
@@ -374,25 +220,25 @@ Paginated response containing:
 **Example Request (First Page):**
 
 ```
-GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234567890&limit=10
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&limit=10
 ```
 
 **Example Request with Asset Filter:**
 
 ```
-GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&limit=20
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&limit=20
 ```
 
 **Example Request (Next Page):**
 
 ```
-GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234567890&after=Mxhc3NDb3JlLTA=&limit=10
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&after=Mxhc3NDb3JlLTA=&limit=10
 ```
 
 **Example Request with Both Filters:**
 
 ```
-GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&leveragedTokenAddress=0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&leveragedTokenAddress=0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
 ```
 
 **Example Success Response:**
@@ -410,9 +256,11 @@ GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234
         "baseAssetAmount": "500000000",
         "leveragedTokenAmount": "2500000000000000000",
         "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
-        "targetLeverage": "1000000000000000000",
+        "targetLeverage": 3.0,
         "isLong": true,
-        "asset": "USDC"
+        "asset": "USDC",
+        "profitAmount": 50.0,
+        "profitPercent": 0.1
       },
       {
         "id": "0xabc123...",
@@ -422,9 +270,11 @@ GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234
         "baseAssetAmount": "1000000000",
         "leveragedTokenAmount": "5000000000000000000",
         "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
-        "targetLeverage": "1000000000000000000",
+        "targetLeverage": 3.0,
         "isLong": true,
-        "asset": "USDC"
+        "asset": "USDC",
+        "profitAmount": null,
+        "profitPercent": null
       }
     ],
     "pageInfo": {
@@ -452,10 +302,13 @@ GET http://localhost:42069/user-trades?user=0x1234567890123456789012345678901234
 **Error Responses:**
 
 - `400 Bad Request`: Missing or invalid user address parameter, invalid leveraged token address parameter, or invalid limit parameter (must be between 1 and 100)
+- `500 Internal Server Error`: Failed to fetch user trades
 
-#### User PnL Endpoint
+### Total Rebates
 
-Get profit and loss (PnL) information for a user across all leveraged tokens at `http://localhost:42069/user-pnl`.
+Get the total rebates earned by a user.
+
+**Endpoint:** `GET https://indexing.bounce.tech/total-rebates`
 
 **Query Parameters:**
 
@@ -463,19 +316,12 @@ Get profit and loss (PnL) information for a user across all leveraged tokens at 
 
 **Response Data:**
 
-- `totalRealized`: Total realized PnL across all leveraged tokens (in base asset units)
-- `totalUnrealized`: Total unrealized PnL across all leveraged tokens (in base asset units)
-- `leveragedTokens`: Record (object) of PnL data keyed by leveraged token address:
-  - Each key is a leveraged token address
-  - Each value contains:
-    - `realized`: Realized PnL for this leveraged token (in base asset units)
-    - `unrealized`: Unrealized PnL for this leveraged token (in base asset units)
-    - `unrealizedPercent`: Unrealized PnL as a percentage (e.g., 0.15 = 15%)
+- Number representing the total rebates earned by the user (includes both referrer and referee rebates, in base asset units)
 
 **Example Request:**
 
 ```
-GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567890
+GET https://indexing.bounce.tech/total-rebates?user=0x1234567890123456789012345678901234567890
 ```
 
 **Example Success Response:**
@@ -483,22 +329,7 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
 ```json
 {
   "status": "success",
-  "data": {
-    "totalRealized": 1234.56,
-    "totalUnrealized": -567.89,
-    "leveragedTokens": {
-      "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1": {
-        "realized": 500.0,
-        "unrealized": 200.0,
-        "unrealizedPercent": 0.4
-      },
-      "0x22a7a4a38a97ca44473548036f22a7bcd2c25457": {
-        "realized": 734.56,
-        "unrealized": -767.89,
-        "unrealizedPercent": -1.045
-      }
-    }
-  },
+  "data": 3.58269,
   "error": null
 }
 ```
@@ -516,44 +347,13 @@ GET http://localhost:42069/user-pnl?user=0x1234567890123456789012345678901234567
 **Error Responses:**
 
 - `400 Bad Request`: Missing or invalid user address parameter
+- `500 Internal Server Error`: Failed to fetch total rebates
 
-#### Total Rebates Endpoint
+### Total Referrals
 
-Get the total rebates earned by a user at `http://localhost:42069/total-rebates`.
+Get the number of referrals a user has made.
 
-**Query Parameters:**
-
-- `user` (required): Ethereum address of the user
-
-**Response Data:**
-
-- Number representing the total rebates earned by the user (includes both referrer and referee rebates)
-
-**Example Request:**
-
-```
-GET http://localhost:42069/total-rebates?user=0x1234567890123456789012345678901234567890
-```
-
-**Example Success Response:**
-
-```json
-{ "status": "success", "data": 3.58269, "error": null }
-```
-
-**Example Error Response:**
-
-```json
-{ "status": "error", "error": "Missing user parameter", "data": null }
-```
-
-**Error Responses:**
-
-- `400 Bad Request`: Missing or invalid user address parameter
-
-#### Total Referrals Endpoint
-
-Get the number value of referrals a user has made at `http://localhost:42069/total-referrals`.
+**Endpoint:** `GET https://indexing.bounce.tech/total-referrals`
 
 **Query Parameters:**
 
@@ -566,32 +366,41 @@ Get the number value of referrals a user has made at `http://localhost:42069/tot
 **Example Request:**
 
 ```
-GET http://localhost:42069/total-referrals?user=0x1234567890123456789012345678901234567890
+GET https://indexing.bounce.tech/total-referrals?user=0x1234567890123456789012345678901234567890
 ```
 
 **Example Success Response:**
 
 ```json
-{ "status": "success", "data": 3, "error": null }
+{
+  "status": "success",
+  "data": 3,
+  "error": null
+}
 ```
 
 **Example Error Response:**
 
 ```json
-{ "status": "error", "error": "Missing user parameter", "data": null }
+{
+  "status": "error",
+  "data": null,
+  "error": "Missing user parameter"
+}
 ```
 
 **Error Responses:**
 
 - `400 Bad Request`: Missing or invalid user address parameter
+- `500 Internal Server Error`: Failed to fetch total referrals
 
-#### Latest Trades Endpoint
+### Latest Trades
 
-Get the latest 100 trades across all users at `http://localhost:42069/latest-trades`.
+Get the latest trades across all users.
 
-**Query Parameters:**
+**Endpoint:** `GET https://indexing.bounce.tech/latest-trades`
 
-- None
+**Query Parameters:** None
 
 **Response Data:**
 
@@ -614,7 +423,7 @@ Trades are ordered by timestamp descending (newest first).
 **Example Request:**
 
 ```
-GET http://localhost:42069/latest-trades
+GET https://indexing.bounce.tech/latest-trades
 ```
 
 **Example Success Response:**
@@ -633,7 +442,7 @@ GET http://localhost:42069/latest-trades
       "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
       "sender": "0x1234567890123456789012345678901234567890",
       "recipient": "0x9876543210987654321098765432109876543210",
-      "targetLeverage": "1000000000000000000",
+      "targetLeverage": "3000000000000000000",
       "isLong": true,
       "asset": "USDC"
     },
@@ -647,7 +456,7 @@ GET http://localhost:42069/latest-trades
       "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
       "sender": "0x9876543210987654321098765432109876543210",
       "recipient": "0x1234567890123456789012345678901234567890",
-      "targetLeverage": "1000000000000000000",
+      "targetLeverage": "3000000000000000000",
       "isLong": true,
       "asset": "USDC"
     }
@@ -660,132 +469,36 @@ GET http://localhost:42069/latest-trades
 
 - None (always returns success with an array, which may be empty if there are no trades)
 
-#### All Users Endpoint
+### All Users
 
-Get all users from the user table at `http://localhost:42069/users`.
+Get all users from the user table who have made at least one trade.
 
-**Query Parameters:**
+**Endpoint:** `GET https://indexing.bounce.tech/users`
 
-- `after` (optional): Cursor for pagination (use `pageInfo.endCursor` from previous response)
-- `before` (optional): Cursor for backward pagination (use `pageInfo.startCursor` from previous response)
-- `limit` (optional): Number of items per page (default: 100, max: 100)
-
-**Cursor Pagination:**
-
-This endpoint supports cursor-based pagination for efficient navigation through large result sets. Users are ordered by `lastTradeTimestamp` descending (most recently active first), then by address ascending.
-
-- Use `after` with `pageInfo.endCursor` from the previous response to get the next page
-- Use `before` with `pageInfo.startCursor` from the previous response to get the previous page
-- The `limit` parameter controls how many items are returned per page (default: 100, maximum: 100)
+**Query Parameters:** None
 
 **Response Data:**
 
-Paginated response containing:
-- `items`: Array of user objects, each containing trading and volume data:
+- Array of user objects, each containing trading and volume data:
   - `address`: User's Ethereum address (primary key)
   - `tradeCount`: Total number of trades made by the user (integer)
-  - `mintVolumeNominal`: Total mint volume in nominal terms (as string, serialized from BigInt)
-  - `redeemVolumeNominal`: Total redeem volume in nominal terms (as string, serialized from BigInt)
-  - `totalVolumeNominal`: Total volume in nominal terms (as string, serialized from BigInt)
-  - `mintVolumeNotional`: Total mint volume in notional terms (as string, serialized from BigInt)
-  - `redeemVolumeNotional`: Total redeem volume in notional terms (as string, serialized from BigInt)
-  - `totalVolumeNotional`: Total volume in notional terms (as string, serialized from BigInt)
-  - `lastTradeTimestamp`: Timestamp of the user's last trade (as string, serialized from BigInt)
-- `pageInfo`: Pagination information object containing:
-  - `startCursor`: Cursor for the first item in the current page (use with `before` for previous page)
-  - `endCursor`: Cursor for the last item in the current page (use with `after` for next page)
-  - `hasPreviousPage`: Whether there are more records before this page
-  - `hasNextPage`: Whether there are more records after this page
-- `totalCount`: Total number of records matching the query (always included)
+  - `mintVolumeNominal`: Total mint volume in nominal terms (number)
+  - `redeemVolumeNominal`: Total redeem volume in nominal terms (number)
+  - `totalVolumeNominal`: Total volume in nominal terms (number)
+  - `mintVolumeNotional`: Total mint volume in notional terms (number)
+  - `redeemVolumeNotional`: Total redeem volume in notional terms (number)
+  - `totalVolumeNotional`: Total volume in notional terms (number)
+  - `lastTradeTimestamp`: Timestamp of the user's last trade (number)
+  - `realizedProfit`: Total realized profit (number)
+  - `unrealizedProfit`: Total unrealized profit (number)
+  - `totalProfit`: Total profit (realized + unrealized) (number)
 
-**Note:** This endpoint excludes referral-related fields. For referral data, use the `/referrers` endpoint.
-
-**Example Request (First Page):**
-
-```
-GET http://localhost:42069/users?limit=20
-```
-
-**Example Request (Next Page):**
-
-```
-GET http://localhost:42069/users?after=Mxhc3NDb3JlLTA=&limit=20
-```
-
-**Example Success Response:**
-
-```json
-{
-  "status": "success",
-  "data": {
-    "items": [
-      {
-        "address": "0x9876543210987654321098765432109876543210",
-        "tradeCount": 10,
-        "mintVolumeNominal": "5000000000",
-        "redeemVolumeNominal": "3000000000",
-        "totalVolumeNominal": "8000000000",
-        "mintVolumeNotional": "25000000000",
-        "redeemVolumeNotional": "15000000000",
-        "totalVolumeNotional": "40000000000",
-        "lastTradeTimestamp": "1704153600"
-      },
-      {
-        "address": "0x1234567890123456789012345678901234567890",
-        "tradeCount": 42,
-        "mintVolumeNominal": "10000000000",
-        "redeemVolumeNominal": "8000000000",
-        "totalVolumeNominal": "18000000000",
-        "mintVolumeNotional": "50000000000",
-        "redeemVolumeNotional": "40000000000",
-        "totalVolumeNotional": "90000000000",
-        "lastTradeTimestamp": "1704067200"
-      }
-    ],
-    "pageInfo": {
-      "startCursor": "Mxhc3NDb3JlLTA=",
-      "endCursor": "MxhcdoP9CVBhY",
-      "hasPreviousPage": false,
-      "hasNextPage": true
-    },
-    "totalCount": 150
-  },
-  "error": null
-}
-```
-
-**Error Responses:**
-
-- `400 Bad Request`: Invalid limit parameter (must be between 1 and 100)
-- `500 Internal Server Error`: Failed to fetch all users
-
-#### Single User Endpoint
-
-Get data for a single user by address at `http://localhost:42069/user`.
-
-**Query Parameters:**
-
-- `user` (required): Ethereum address of the user
-
-**Response Data:**
-
-- User object containing trading and volume data (same structure as in the All Users endpoint):
-  - `address`: User's Ethereum address (primary key)
-  - `tradeCount`: Total number of trades made by the user (integer)
-  - `mintVolumeNominal`: Total mint volume in nominal terms (as string, serialized from BigInt)
-  - `redeemVolumeNominal`: Total redeem volume in nominal terms (as string, serialized from BigInt)
-  - `totalVolumeNominal`: Total volume in nominal terms (as string, serialized from BigInt)
-  - `mintVolumeNotional`: Total mint volume in notional terms (as string, serialized from BigInt)
-  - `redeemVolumeNotional`: Total redeem volume in notional terms (as string, serialized from BigInt)
-  - `totalVolumeNotional`: Total volume in notional terms (as string, serialized from BigInt)
-  - `lastTradeTimestamp`: Timestamp of the user's last trade (as string, serialized from BigInt)
-
-**Note:** This endpoint excludes referral-related fields. For referral data, use the `/referrers` endpoint.
+Users are ordered by `lastTradeTimestamp` descending (most recently active first).
 
 **Example Request:**
 
 ```
-GET http://localhost:42069/user?user=0x1234567890123456789012345678901234567890
+GET https://indexing.bounce.tech/users
 ```
 
 **Example Success Response:**
@@ -793,44 +506,51 @@ GET http://localhost:42069/user?user=0x1234567890123456789012345678901234567890
 ```json
 {
   "status": "success",
-  "data": {
-    "address": "0x1234567890123456789012345678901234567890",
-    "tradeCount": 42,
-    "mintVolumeNominal": "10000000000",
-    "redeemVolumeNominal": "8000000000",
-    "totalVolumeNominal": "18000000000",
-    "mintVolumeNotional": "50000000000",
-    "redeemVolumeNotional": "40000000000",
-    "totalVolumeNotional": "90000000000",
-    "lastTradeTimestamp": "1704067200"
-  },
+  "data": [
+    {
+      "address": "0x9876543210987654321098765432109876543210",
+      "tradeCount": 10,
+      "mintVolumeNominal": 5000.0,
+      "redeemVolumeNominal": 3000.0,
+      "totalVolumeNominal": 8000.0,
+      "mintVolumeNotional": 25000.0,
+      "redeemVolumeNotional": 15000.0,
+      "totalVolumeNotional": 40000.0,
+      "lastTradeTimestamp": 1704153600,
+      "realizedProfit": 100.5,
+      "unrealizedProfit": 50.25,
+      "totalProfit": 150.75
+    },
+    {
+      "address": "0x1234567890123456789012345678901234567890",
+      "tradeCount": 42,
+      "mintVolumeNominal": 10000.0,
+      "redeemVolumeNominal": 8000.0,
+      "totalVolumeNominal": 18000.0,
+      "mintVolumeNotional": 50000.0,
+      "redeemVolumeNotional": 40000.0,
+      "totalVolumeNotional": 90000.0,
+      "lastTradeTimestamp": 1704067200,
+      "realizedProfit": 500.0,
+      "unrealizedProfit": 200.0,
+      "totalProfit": 700.0
+    }
+  ],
   "error": null
-}
-```
-
-**Example Error Response:**
-
-```json
-{
-  "status": "error",
-  "data": null,
-  "error": "Missing user parameter"
 }
 ```
 
 **Error Responses:**
 
-- `400 Bad Request`: Missing or invalid user address parameter
-- `404 Not Found`: User not found in the database
-- `500 Internal Server Error`: Failed to fetch user
+- `500 Internal Server Error`: Failed to fetch all users
 
-#### Referrers Endpoint
+### Referrers
 
-Get all users who have registered a referral code at `http://localhost:42069/referrers`.
+Get all users who have registered a referral code.
 
-**Query Parameters:**
+**Endpoint:** `GET https://indexing.bounce.tech/referrers`
 
-- None
+**Query Parameters:** None
 
 **Response Data:**
 
@@ -845,7 +565,7 @@ Get all users who have registered a referral code at `http://localhost:42069/ref
 **Example Request:**
 
 ```
-GET http://localhost:42069/referrers
+GET https://indexing.bounce.tech/referrers
 ```
 
 **Example Success Response:**
@@ -875,20 +595,20 @@ GET http://localhost:42069/referrers
 
 - `500 Internal Server Error`: Failed to fetch referrers
 
-#### All Leveraged Tokens Endpoint
+### All Leveraged Tokens
 
-Get all leveraged tokens from the database at `http://localhost:42069/leveraged-tokens`.
+Get all leveraged tokens from the database.
 
-**Query Parameters:**
+**Endpoint:** `GET https://indexing.bounce.tech/leveraged-tokens`
 
-- None
+**Query Parameters:** None
 
 **Response Data:**
 
 - Array of leveraged token objects, each containing:
   - `address`: Leveraged token contract address (primary key)
   - `marketId`: Market identifier (integer)
-  - `targetLeverage`: Target leverage amount (as string, serialized from BigInt)
+  - `targetLeverage`: Target leverage amount (number)
   - `isLong`: Whether the token is a long position (boolean)
   - `symbol`: ERC-20 symbol (string)
   - `name`: ERC-20 name (string)
@@ -899,7 +619,7 @@ Get all leveraged tokens from the database at `http://localhost:42069/leveraged-
 **Example Request:**
 
 ```
-GET http://localhost:42069/leveraged-tokens
+GET https://indexing.bounce.tech/leveraged-tokens
 ```
 
 **Example Success Response:**
@@ -911,7 +631,7 @@ GET http://localhost:42069/leveraged-tokens
     {
       "address": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
       "marketId": 1,
-      "targetLeverage": "1000000000000000000",
+      "targetLeverage": 3.0,
       "isLong": true,
       "symbol": "3L-USDC",
       "name": "3x Long USDC",
@@ -922,7 +642,7 @@ GET http://localhost:42069/leveraged-tokens
     {
       "address": "0x22a7a4a38a97ca44473548036f22a7bcd2c25457",
       "marketId": 1,
-      "targetLeverage": "2000000000000000000",
+      "targetLeverage": 2.0,
       "isLong": false,
       "symbol": "2S-USDC",
       "name": "2x Short USDC",
@@ -939,9 +659,11 @@ GET http://localhost:42069/leveraged-tokens
 
 - `500 Internal Server Error`: Failed to fetch leveraged tokens
 
-#### Single Leveraged Token Endpoint
+### Single Leveraged Token
 
-Get data for a single leveraged token by address at `http://localhost:42069/leveraged-tokens/:leveragedTokenAddress`.
+Get data for a single leveraged token by address.
+
+**Endpoint:** `GET https://indexing.bounce.tech/leveraged-tokens/:leveragedTokenAddress`
 
 **Path Parameters:**
 
@@ -952,7 +674,7 @@ Get data for a single leveraged token by address at `http://localhost:42069/leve
 - Leveraged token object containing:
   - `address`: Leveraged token contract address (primary key)
   - `marketId`: Market identifier (integer)
-  - `targetLeverage`: Target leverage amount (as string, serialized from BigInt)
+  - `targetLeverage`: Target leverage amount (number)
   - `isLong`: Whether the token is a long position (boolean)
   - `symbol`: ERC-20 symbol (string)
   - `name`: ERC-20 name (string)
@@ -963,7 +685,7 @@ Get data for a single leveraged token by address at `http://localhost:42069/leve
 **Example Request:**
 
 ```
-GET http://localhost:42069/leveraged-tokens/0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
+GET https://indexing.bounce.tech/leveraged-tokens/0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
 ```
 
 **Example Success Response:**
@@ -974,7 +696,7 @@ GET http://localhost:42069/leveraged-tokens/0x1eefbacfea06d786ce012c6fc861bec6c7
   "data": {
     "address": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
     "marketId": 1,
-    "targetLeverage": "1000000000000000000",
+    "targetLeverage": 3.0,
     "isLong": true,
     "symbol": "3L-USDC",
     "name": "3x Long USDC",
@@ -1001,21 +723,3 @@ GET http://localhost:42069/leveraged-tokens/0x1eefbacfea06d786ce012c6fc861bec6c7
 - `400 Bad Request`: Missing or invalid leveraged token address parameter
 - `404 Not Found`: Leveraged token not found in the database
 - `500 Internal Server Error`: Failed to fetch leveraged token
-
-## Scripts
-
-- `npm run dev`: Start development server with hot reload
-- `npm run start`: Start production server
-- `npm run serve`: Serve API only (no indexing)
-- `npm run db`: Database management commands
-- `npm run codegen`: Generate TypeScript types
-- `npm run lint`: Run ESLint
-- `npm run typecheck`: Run TypeScript type checking
-- `npm run test`: Run tests
-- `npm run test:watch`: Run tests in watch mode
-
-## Learn More
-
-- [Bounce Tech](https://bounce.tech/) - The leveraged token protocol being indexed
-- [Ponder Documentation](https://ponder.sh/docs)
-- [Ponder GitHub](https://github.com/ponder-sh/ponder)
