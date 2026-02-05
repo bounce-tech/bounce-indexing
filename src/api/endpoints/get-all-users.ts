@@ -58,7 +58,7 @@ const getAllUsers = async (): Promise<UserSummary[]> => {
         mintVolumeNotional: bigIntToNumber(user.mintVolumeNotional, 6),
         redeemVolumeNotional: bigIntToNumber(user.redeemVolumeNotional, 6),
         totalVolumeNotional: bigIntToNumber(user.totalVolumeNotional, 6),
-        lastTradeTimestamp: bigIntToNumber(user.lastTradeTimestamp, 6),
+        lastTradeTimestamp: bigIntToNumber(user.lastTradeTimestamp, 0),
         realizedProfit: bigIntToNumber(user.realizedProfit, 6),
         unrealizedProfit,
         totalProfit,
