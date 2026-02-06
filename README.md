@@ -199,19 +199,33 @@ Get all trades for a specific user with optional filtering by asset or leveraged
 - `user` (required): Ethereum address of the user
 - `asset` (optional): Filter trades by asset (base asset symbol)
 - `leveragedTokenAddress` (optional): Filter trades by specific leveraged token address
+- `sortBy` (optional): Field to sort by. Values: `date`, `asset`, `activity`, `nomVal`. Default: `date`
+- `sortOrder` (optional): Sort direction. Values: `asc` (ascending) or `desc` (descending). Default: `desc`
 - `after` (optional): Cursor for pagination (use `pageInfo.endCursor` from previous response)
 - `before` (optional): Cursor for backward pagination (use `pageInfo.startCursor` from previous response)
 - `limit` (optional): Number of items per page (default: 100, max: 100)
 
 **Note:** You can combine `asset` and `leveragedTokenAddress` filters. If both are provided, trades must match both conditions.
 
+**Sorting:**
+
+- `date`: Sort by trade timestamp (default)
+- `asset`: Sort by base asset symbol alphabetically
+- `activity`: Sort by trade type (buys/sells)
+- `nomVal`: Sort by nominal value (baseAssetAmount)
+
+Default behavior (no sort parameters): returns trades ordered by date descending (most recent first).
+
+All sort fields use timestamp as a secondary sort key for stable pagination, followed by ID as a tertiary sort key.
+
 **Cursor Pagination:**
 
-This endpoint supports cursor-based pagination for efficient navigation through large result sets. Trades are ordered by timestamp descending (newest first), then by ID ascending.
+This endpoint supports cursor-based pagination for efficient navigation through large result sets. Cursor pagination works with all sort fields.
 
 - Use `after` with `pageInfo.endCursor` from the previous response to get the next page
 - Use `before` with `pageInfo.startCursor` from the previous response to get the previous page
 - The `limit` parameter controls how many items are returned per page (default: 100, maximum: 100)
+- Cursors encode a composite key (sortValue, timestamp, id) to ensure stable pagination regardless of which field you sort by
 
 **Response Data:**
 
@@ -258,6 +272,24 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
 
 ```
 GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&leveragedTokenAddress=0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
+```
+
+**Example Request with Custom Sorting (oldest first):**
+
+```
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&sortBy=date&sortOrder=asc
+```
+
+**Example Request Sorted by Nominal Value (highest first):**
+
+```
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&sortBy=nomVal&sortOrder=desc
+```
+
+**Example Request Sorted by Asset with Filter:**
+
+```
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&asset=USDC&sortBy=activity&sortOrder=desc
 ```
 
 **Example Success Response:**
@@ -320,7 +352,7 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
 
 **Error Responses:**
 
-- `400 Bad Request`: Missing or invalid user address parameter, invalid leveraged token address parameter, or invalid limit parameter (must be between 1 and 100)
+- `400 Bad Request`: Missing or invalid user address parameter, invalid leveraged token address parameter, invalid limit parameter (must be between 1 and 100), or invalid sort parameters (sortBy must be one of: date, asset, activity, nomVal; sortOrder must be 'asc' or 'desc')
 - `500 Internal Server Error`: Failed to fetch user trades
 
 ### Total Rebates
