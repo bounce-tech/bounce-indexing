@@ -89,10 +89,11 @@ const getUsersTrades = async (
     const sortConfig = sortConfigs[sortBy];
     const orderFn = sortDescending ? desc : asc;
 
-    // Order by: primary sort field, then timestamp (desc), then id (asc)
+    // Order by: primary sort field, then timestamp (desc, as tiebreaker for non-date sorts), then id (asc)
+    const isDateSort = sortBy === "date";
     const orderByClause = [
       orderFn(sortConfig.column),
-      desc(schema.trade.timestamp),
+      ...(isDateSort ? [] : [desc(schema.trade.timestamp)]),
       asc(schema.trade.id),
     ];
 
