@@ -14,7 +14,12 @@ import getAllUsers from "./endpoints/get-all-users";
 import getReferrers from "./endpoints/get-referrers";
 import getAllLeveragedTokens from "./endpoints/get-all-leveraged-tokens";
 import getLeveragedToken from "./endpoints/get-leveraged-token";
-import { validatePaginationParams } from "./utils/validate";
+import {
+  validatePaginationParams,
+  validateSortParams,
+  SortField,
+  SortOrder,
+} from "./utils/validate";
 import getPortfolio from "./endpoints/get-portfolio";
 
 const app = new Hono();
@@ -68,12 +73,19 @@ app.get("/user-trades", async (c) => {
     if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
     const asset = c.req.query("asset");
     const lt = c.req.query("leveragedTokenAddress");
-    if (lt && !isAddress(lt)) return c.json(formatError("Invalid lt"), 400);
+    if (lt && !isAddress(lt)) return c.json(formatError("Invalid leveragedTokenAddress"), 400);
     const after = c.req.query("after");
     const before = c.req.query("before");
     const limit = c.req.query("limit");
     const validationError = validatePaginationParams(after, before, limit);
     if (validationError) return c.json(formatError(validationError), 400);
+    
+    // Sort params
+    const sortBy = c.req.query("sortBy");
+    const sortOrder = c.req.query("sortOrder");
+    const sortError = validateSortParams(sortBy, sortOrder);
+    if (sortError) return c.json(formatError(sortError), 400);
+    
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     const trades = await getUsersTrades(
       user,
@@ -81,7 +93,11 @@ app.get("/user-trades", async (c) => {
       lt as Address | undefined,
       after,
       before,
-      parsedLimit ?? 100
+      parsedLimit ?? 100,
+      {
+        sortBy: sortBy as SortField | undefined,
+        sortOrder: sortOrder as SortOrder | undefined,
+      }
     );
     return c.json(formatSuccess(trades));
   } catch (error) {
