@@ -13,6 +13,18 @@ export const leveragedToken = onchainTable("leveragedToken", (t) => ({
   exchangeRate: t.bigint().notNull().default(0n),
 }));
 
+export const pendingRedemption = onchainTable(
+  "pendingRedemption",
+  (t) => ({
+    user: t.hex().notNull(),
+    leveragedToken: t.hex().notNull(),
+    txHash: t.hex().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({ columns: [table.user, table.leveragedToken] }),
+  })
+);
+
 export const trade = onchainTable("trade", (t) => ({
   id: t.text().primaryKey(),
   isBuy: t.boolean().notNull(),
@@ -24,6 +36,7 @@ export const trade = onchainTable("trade", (t) => ({
   leveragedTokenAmount: t.bigint().notNull(),
   profitAmount: t.bigint(),
   profitPercent: t.bigint(),
+  originTxHash: t.hex().notNull(),
   txHash: t.hex().notNull(),
 }));
 
@@ -82,6 +95,17 @@ export const balance = onchainTable(
   })
 );
 
+export const pendingRedemptionsRelations = relations(pendingRedemption, ({ one }) => ({
+  user: one(user, {
+    fields: [pendingRedemption.user],
+    references: [user.address],
+  }),
+  leveragedToken: one(leveragedToken, {
+    fields: [pendingRedemption.leveragedToken],
+    references: [leveragedToken.address],
+  }),
+}));
+
 export const leveragedTokensRelations = relations(
   leveragedToken,
   ({ many }) => ({
@@ -89,6 +113,7 @@ export const leveragedTokensRelations = relations(
     transfers: many(transfer),
     fees: many(fee),
     balances: many(balance),
+    pendingRedemptions: many(pendingRedemption),
   })
 );
 
@@ -126,4 +151,5 @@ export const balancesRelations = relations(balance, ({ one }) => ({
 
 export const usersRelations = relations(user, ({ many }) => ({
   balances: many(balance),
+  pendingRedemptions: many(pendingRedemption),
 }));
