@@ -13,6 +13,7 @@ export interface LeveragedTokenSummary {
   name: string;
   decimals: number;
   targetAsset: string;
+  mintPaused: boolean;
   exchangeRate: bigint;
   totalSupply: bigint;
   totalAssets: bigint;
@@ -27,6 +28,7 @@ export const leveragedTokenSelect = {
   name: schema.leveragedToken.name,
   decimals: schema.leveragedToken.decimals,
   targetAsset: schema.leveragedToken.targetAsset,
+  mintPaused: schema.leveragedToken.mintPaused,
   exchangeRate: schema.leveragedToken.exchangeRate,
   totalSupply: schema.leveragedToken.totalSupply,
 };
