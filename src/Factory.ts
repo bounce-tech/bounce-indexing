@@ -4,7 +4,7 @@ import schema from "ponder:schema";
 // event CreateLeveragedToken(address indexed creator, address indexed token, uint32 indexed marketId, uint256 targetLeverage, bool isLong);
 ponder.on("Factory:CreateLeveragedToken", async ({ event, context }) => {
   const { creator, token, marketId, targetLeverage, isLong } = event.args;
-  const address = token
+  const address = token;
 
   const symbol = await context.client.readContract({
     abi: context.contracts.LeveragedToken.abi,
