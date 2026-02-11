@@ -123,7 +123,7 @@ Get portfolio data for a user including balances, unrealized profit, and realize
   - `symbol`: ERC-20 symbol (string)
   - `name`: ERC-20 name (string)
   - `decimals`: ERC-20 decimals (integer)
-  - `asset`: Leveraged token target asset
+  - `targetAsset`: Leveraged token target asset
   - `exchangeRate`: Current exchange rate (as string, serialized from BigInt)
   - `userBalance`: User's balance of this leveraged token (as string, serialized from BigInt)
 - `unrealizedProfit`: Unrealized profit for this leveraged token (number)
@@ -159,7 +159,7 @@ GET https://indexing.bounce.tech/portfolio/0x12345678901234567890123456789012345
         "symbol": "3L-USDC",
         "name": "3x Long USDC",
         "decimals": 18,
-        "asset": "USDC",
+        "targetAsset": "USDC",
         "exchangeRate": "1050000000000000000",
         "userBalance": "5000000000000000000",
         "unrealizedProfit": 200.0,
@@ -241,7 +241,7 @@ Paginated response containing:
   - `leveragedToken`: Address of the leveraged token
   - `targetLeverage`: Target leverage of the leveraged token (number)
   - `isLong`: Whether the leveraged token is a long position
-  - `asset`: Leveraged token target asset (e.g. BTC, ETH)
+  - `targetAsset`: Leveraged token target asset (e.g. BTC, ETH)
   - `profitAmount`: Profit amount for this trade (number, null if not applicable)
   - `profitPercent`: Profit percentage for this trade (number, null if not applicable)
 - `totalCount`: Total number of records matching the query
@@ -301,7 +301,7 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
         "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
         "targetLeverage": 3.0,
         "isLong": true,
-        "asset": "USDC",
+        "targetAsset": "USDC",
         "profitAmount": 50.0,
         "profitPercent": 0.1
       },
@@ -315,7 +315,7 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
         "leveragedToken": "0x1eefbacfea06d786ce012c6fc861bec6c7a828c1",
         "targetLeverage": 3.0,
         "isLong": true,
-        "asset": "USDC",
+        "targetAsset": "USDC",
         "profitAmount": null,
         "profitPercent": null
       }
