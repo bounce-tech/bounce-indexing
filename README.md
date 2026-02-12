@@ -323,7 +323,7 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
 **Example Request with Both Filters:**
 
 ```
-GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&symbol=ETH2L&leveragedTokenAddress=0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
+GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678901234567890&symbol=ETH2L&address=0x1eefbacfea06d786ce012c6fc861bec6c7a828c1
 ```
 
 **Example Request with Custom Sorting (oldest first):**
@@ -394,7 +394,7 @@ GET https://indexing.bounce.tech/user-trades?user=0x1234567890123456789012345678
 
 **Error Responses:**
 
-- `400 Bad Request`: Missing or invalid user address parameter, invalid leveraged token address parameter, invalid page parameter (must be at least 1), invalid limit parameter (must be between 1 and 100), or invalid sort parameters (sortBy must be one of: date, symbol, activity, nomVal; sortOrder must be 'asc' or 'desc')
+- `400 Bad Request`: Missing or invalid user address parameter, invalid address parameter, invalid page parameter (must be at least 1), invalid limit parameter (must be between 1 and 100), or invalid sort parameters (sortBy must be one of: date, symbol, activity, nomVal; sortOrder must be 'asc' or 'desc')
 - `500 Internal Server Error`: Failed to fetch user trades
 
 ### User Referrals
