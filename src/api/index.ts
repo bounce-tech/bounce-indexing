@@ -87,7 +87,7 @@ app.get("/user-trades", async (c) => {
     if (!isAddress(user)) return c.json(formatError("Invalid user address"), 400);
     const symbol = c.req.query("symbol");
     const address = c.req.query("address");
-    if (address && !isAddress(address)) return c.json(formatError("Invalid address"), 400);
+    if (address && !isAddress(address)) return c.json(formatError("Invalid address parameter"), 400);
     const page = c.req.query("page");
     const limit = c.req.query("limit");
     const paginationError = validateOffsetPaginationParams(page, limit);
